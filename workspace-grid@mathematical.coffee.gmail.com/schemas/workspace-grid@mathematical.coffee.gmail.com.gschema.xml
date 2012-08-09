@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="workspace-grid">
+  <schema path="org/gnome/shell/extensions/workspace-grid/" id="org.gnome.shell.extensions.workspace-grid">
+    <key type="s" name="hello-text">
+      <default>''</default>
+      <summary>Alternative greeting text.</summary>
+      <description>If not empty, it contains the text that will be shown when clicking on the panel.</description>
+    </key>
+  </schema>
+</schemalist>

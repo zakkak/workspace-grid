@@ -1,3 +1,6 @@
 gschemas.compiled
 syntax: glob
 *.mo
+gschemas.compiled
+syntax: glob
+*.mo
