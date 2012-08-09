@@ -1,0 +1,14 @@
+{
+ "extension-id": "workspace-grid",
+ "name": "Workspace Grid",
+ "uuid": "workspace-grid@mathematical.coffee.gmail.com",
+ "gettext-domain": "workspace-grid",
+ "description": "TODO",
+ "shell-version": [ 
+     "3.2" ,
+     "3.4"
+ ],
+ "url": "https://bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension",
+ "dev-version": "0.1",
+ "version": 1
+}
