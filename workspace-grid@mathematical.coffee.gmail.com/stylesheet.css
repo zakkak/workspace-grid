@@ -1,0 +1,30 @@
+/* Note:
+ * .ws-switcher-active-{up,down} are already in the global .css so we don't
+ * include them here.
+ *
+ * FIXME: include here for completeness/future proofing?
+ */
+.ws-switcher-active-left {
+    height: 100px;
+    border: 0px;
+    background: rgba(255,255,255,0.5);
+    background-image: url("ws-switch-arrow-left.svg");
+    border-radius: 8px;
+}
+
+.ws-switcher-active-right {
+    height: 100px;
+    border: 0px;
+    background: rgba(255,255,255,0.5);
+    background-image: url("ws-switch-arrow-right.svg");
+    border-radius: 8px;
+}
+
+.workspace-switcher-grid {
+    spacing: 8px;
+    -shell-grid-item-size: 100px; /* ?? */
+    background: rgba(0,0,0,0.8);
+    border: 1px solid rgba(128,128,128,0.40);
+    border-radius: 24px;
+    padding: 20px;
+}

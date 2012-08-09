@@ -3,7 +3,7 @@
  "name": "Workspace Grid",
  "uuid": "workspace-grid@mathematical.coffee.gmail.com",
  "gettext-domain": "workspace-grid",
- "description": "TODO",
+ "description": "Arranges workspaces in a configurable grid",
  "shell-version": [ 
      "3.2" ,
      "3.4"
