@@ -1,3 +1,4 @@
+/*global global, log */
 /* Workspaces Grid GNOME shell extension.
  *
  * Inspired by Frippery Static Workspaces[0] by R. M. Yorston
@@ -15,7 +16,7 @@
  * Also, there seems to be no way to query for the current number of rows/
  * columns of workspaces (from GJS).
  *
- * So, the system still sees the workspaces as being in a 
+ * So, the system still sees the workspaces as being in a
  * column 0, ..., <nrows * ncols - 1>, but *we* see this as a grid of
  * workspaces, row-major, and 0-based.
  *
@@ -28,7 +29,8 @@
  * (TODO: report of this losing the ability to drag n drop applications between
  * workspaces - check).
  *
- * See also the edited workspaces indicator http://kubiznak-petr.ic.cz/en/workspace-indicator.php (this is column-major).
+ * See also the edited workspaces indicator
+ * http://kubiznak-petr.ic.cz/en/workspace-indicator.php (this is column-major).
  *
  * TODO
  * ----
@@ -67,39 +69,8 @@ let staticWorkspaceStorage = {};
 let nWorkspaces;
 let workspaceSwitcherPopup = null;
 
-function init() {
-}
-
-function enable() {
-    makeWorkspacesStatic();
-    modifyNumWorkspaces();
-    overrideKeybindingsAndPopup();
-    overrideWorkspaceDisplay();
-
-    // create a workspace switcher popup (no hurry; wait until there's free
-    // CPU)
-    Mainloop.idle_add(function () {
-        workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
-        // FIXME: for some reason the height is off the first time the popup shows.
-        // A quick show/hide will do the trick but surely there's a better way
-        // (i.e. a reason why this occurs and I can address that directly)
-        workspaceSwitcherPopup.show();
-        workspaceSwitcherPopup.hide();
-        return false;
-    });
-}
-
-function disable() {
-    unmodifyNumWorkspaces();
-    unmakeWorkspacesStatic();
-    unoverrideKeybindingsAndPopup();
-    unoverrideWorkspaceDisplay();
-
-    workspaceSwitcherPopup = null;
-}
-
 /***************
- * Helper functions 
+ * Helper functions
  ***************/
 
 function dummy() {
@@ -157,7 +128,7 @@ WorkspaceSwitcherPopup.prototype = {
 
         // FIXME: don't destroy all the time, only when configuration changes.
         this._grid.removeAll();
-    
+
         for (let i = 0; i < global.screen.n_workspaces; ++i) {
             let icon = new St.Bin({style_class: 'ws-switcher-box'}),
                 primary = Main.layoutManager.primaryMonitor;
@@ -168,19 +139,19 @@ WorkspaceSwitcherPopup.prototype = {
         // It seems they also do row-major layout.
         let ch = this._grid.getItemAtIndex(activeWorkspaceIndex),
             style = null;
-        switch(direction) {
-            case UP:
-                style = 'ws-switcher-active-up';
-                break;
-            case DOWN:
-                style = 'ws-switcher-active-down';
-                break;
-            case RIGHT:
-                style = 'ws-switcher-active-right';
-                break;
-            case LEFT:
-                style = 'ws-switcher-active-left';
-                break;
+        switch (direction) {
+        case UP:
+            style = 'ws-switcher-active-up';
+            break;
+        case DOWN:
+            style = 'ws-switcher-active-down';
+            break;
+        case RIGHT:
+            style = 'ws-switcher-active-right';
+            break;
+        case LEFT:
+            style = 'ws-switcher-active-left';
+            break;
         }
         if (style) {
             ch.remove_style_class_name('ws-switcher-box');
@@ -189,20 +160,10 @@ WorkspaceSwitcherPopup.prototype = {
 
         // FIXME: why does this._container not automatically stretch to
         // this._grid's height?
-        this._container.height = this._grid._grid.height + 
+        this._container.height = this._grid._grid.height +
             this._grid.actor.get_theme_node().get_vertical_padding();
     }
 };
-
-/* Keybinding handler.
- * Should bring up a workspace switcher.
- */
-function showWorkspaceSwitcher(shellwm, binding, mask, window, backwards) {
-    if (global.screen.n_workspaces == 1)                                    
-        return;                                                             
-
-    moveWorkspace(binding);
-}
 
 /* Switch to the appropriate workspace.
  * (TODO: how else may the workspace be switched?)
@@ -213,23 +174,24 @@ function moveWorkspace(direction) {
         to = coord;
 
     switch (direction) {
-        case LEFT:
-            to[1] = Math.max(0, coord[1] - 1);
-            break;
-        case RIGHT:
-            to[1] = Math.min(WORKSPACE_CONFIGURATION.columns - 1, coord[1] + 1);
-            break;
-        case UP:
-            to[0] = Math.max(0, coord[0] - 1);
-            break;
-        case DOWN:
-            to[0] = Math.min(WORKSPACE_CONFIGURATION.rows - 1, coord[0] + 1);
-            break;
+    case LEFT:
+        to[1] = Math.max(0, coord[1] - 1);
+        break;
+    case RIGHT:
+        to[1] = Math.min(WORKSPACE_CONFIGURATION.columns - 1, coord[1] + 1);
+        break;
+    case UP:
+        to[0] = Math.max(0, coord[0] - 1);
+        break;
+    case DOWN:
+        to[0] = Math.min(WORKSPACE_CONFIGURATION.rows - 1, coord[0] + 1);
+        break;
     }
     to = rowColToIndex(to);
     //log('moving from workspace %d to %d'.format(from, to));
     if (to !== from) {
-        global.screen.get_workspace_by_index(to).activate(global.get_current_time());
+        global.screen.get_workspace_by_index(to).activate(
+                global.get_current_time());
     }
 
     // show the workspace switcher popup
@@ -238,8 +200,19 @@ function moveWorkspace(direction) {
     }
 }
 
+
+/* Keybinding handler.
+ * Should bring up a workspace switcher.
+ */
+function showWorkspaceSwitcher(shellwm, binding, mask, window, backwards) {
+    if (global.screen.n_workspaces === 1)
+        return;
+
+    moveWorkspace(binding);
+}
+
 /******************
- * Overrides the 'switch_to_workspace_XXX' keybindings 
+ * Overrides the 'switch_to_workspace_XXX' keybindings
  ******************/
 function overrideKeybindingsAndPopup() {
     Main.wm.setKeybindingHandler(LEFT, showWorkspaceSwitcher);
@@ -248,8 +221,8 @@ function overrideKeybindingsAndPopup() {
     Main.wm.setKeybindingHandler(DOWN, showWorkspaceSwitcher);
 }
 
-/* Restore the original keybindings 
- * FIXME: Should we store Main.wm._keyBindingHandlers['switch_to_workspace_xxxx']
+/* Restore the original keybindings
+ * FIXME: Should we store Main.wm._keyBindingHandlers['switch_to_workspace_xxx']
  *  and restore these instead?
  */
 function unoverrideKeybindingsAndPopup() {
@@ -328,11 +301,11 @@ function makeWorkspacesStatic() {
     Main._queueCheckWorkspaces = dummy;
     Main._checkWorkspaces = dummy;
 
-    Main._workspaces.forEach(function(workspace) {
+    Main._workspaces.forEach(function (workspace) {
             workspace.disconnect(workspace._windowAddedId);
             workspace.disconnect(workspace._windowRemovedId);
             workspace._lastRemovedWindow = null;
-    });
+        });
 }
 
 function unmakeWorkspacesStatic() {
@@ -345,4 +318,38 @@ function unmakeWorkspacesStatic() {
 
     // recalculate new number of workspaces.
     Main._nWorkspacesChanged();
+}
+
+/***************************
+ *         EXTENSION       *
+ ***************************/
+function init() {
+}
+
+function enable() {
+    makeWorkspacesStatic();
+    modifyNumWorkspaces();
+    overrideKeybindingsAndPopup();
+    overrideWorkspaceDisplay();
+
+    // create a workspace switcher popup (no hurry; wait until there's free
+    // CPU)
+    Mainloop.idle_add(function () {
+        workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
+        // FIXME: for some reason the height is off the first time.
+        // A quick show/hide will do the trick but surely there's a better way
+        // (i.e. a reason why this occurs and I can address that directly)
+        workspaceSwitcherPopup.actor.show();
+        workspaceSwitcherPopup.actor.hide();
+        return false;
+    });
+}
+
+function disable() {
+    unmodifyNumWorkspaces();
+    unmakeWorkspacesStatic();
+    unoverrideKeybindingsAndPopup();
+    unoverrideWorkspaceDisplay();
+
+    workspaceSwitcherPopup = null;
 }
