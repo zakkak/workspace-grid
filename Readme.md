@@ -1,7 +1,13 @@
 # Workspace Grid GNOME Shell Extension
 
-Description of what the extension does.
+This extension extends the [Frippery Static Workspaces extension](https://extensions.gnome.org/extension/12/static-workspaces/) by:
 
+* holding the number of workspaces fixed (Frippery Static Workspaces)
+* allowing the user to specify their workspace layout (rows/columns)
+* updating the workspaces display in the overview to reflect the workspace grid layout
+* updating the workspace switcher/keybindings to reflect the workspace grid layout
+* (optionally) adding a visual workspace indicator. (TODO: separate extension?)
+TODO: 
 Screenshot of the extension.
 
 Written 2012 by mathematical.coffee [mathematical.coffee@gmail.com](mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question).   
