@@ -47,7 +47,7 @@
  * until this one has loaded first. Adding in a Mainloop.idle_add should do the
  * trick.
  *
- * What I'd *like* to do is provide a signal `workspace-grid-enabled` on 
+ * What I'd *like* to do is provide a signal `workspace-grid-enabled` on
  * global.screen when this extension is done populating
  * global.screen.workspace_grid, and your extension can connect to that, e.g.:
  *
@@ -112,7 +112,6 @@ const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 
-const IconGrid = imports.ui.iconGrid;
 const Main = imports.ui.main;
 const Tweener = imports.ui.tweener;
 const WorkspaceSwitcher = imports.ui.workspaceSwitcherPopup;
@@ -202,8 +201,11 @@ function moveWorkspace(direction) {
         break;
     }
     to = rowColToIndex(row, col);
-    //log('moving from workspace %d to %d'.format(from, to));
-    if (to > 0 && to !== from) {
+    if (to < 0) { // if we tried to move to a workspace out of range
+        to = from;
+    }
+    // log('moving from workspace %d to %d'.format(from, to));
+    if (to !== from) {
         global.screen.get_workspace_by_index(to).activate(
                 global.get_current_time());
     }
@@ -224,65 +226,111 @@ function WorkspaceSwitcherPopup() {
 WorkspaceSwitcherPopup.prototype = {
     __proto__: WorkspaceSwitcher.WorkspaceSwitcherPopup.prototype,
 
-    _init: function () {
-        WorkspaceSwitcher.WorkspaceSwitcherPopup.prototype._init.call(this);
-        this._list.destroy();
-        this._list = null;
-        this._container.style_class = '';
+    // note: this makes sure everything fits vertically and then adjust the
+    // horizontal to fit.
+    _getPreferredHeight : function (actor, forWidth, alloc) {
+        let children = this._list.get_children();
+        let primary = Main.layoutManager.primaryMonitor;
 
-        this._grid = new IconGrid.IconGrid({
-            rowLimit: global.screen.workspace_grid.rows,
-            columnLimit: global.screen.workspace_grid.columns,
-            xAlign: St.Align.MIDDLE
-        });
-        this._grid.actor.style_class = 'workspace-switcher-grid';
+        let availHeight = primary.height;
+        availHeight -= Main.panel.actor.height;
+        availHeight -= this.actor.get_theme_node().get_vertical_padding();
+        availHeight -= this._container.get_theme_node().get_vertical_padding();
+        availHeight -= this._list.get_theme_node().get_vertical_padding();
 
-        this._container.add(this._grid.actor, {expand: true});
+        let height = 0;
+        for (let i = 0; i < global.screen.n_workspaces;
+                i += global.screen.workspace_grid.columns) {
+            let [childMinHeight, childNaturalHeight] =
+                children[i].get_preferred_height(-1);
+            let [childMinWidth, childNaturalWidth] =
+                children[i].get_preferred_width(childNaturalHeight);
+            height += childNaturalHeight * primary.width / primary.height;
+        }
 
-        this._redraw();
+        let spacing = this._itemSpacing *
+            (global.screen.workspace_grid.rows - 1);
+        height += spacing;
+        height = Math.min(height, availHeight);
+
+        this._childHeight = (height - spacing) /
+            global.screen.workspace_grid.rows;
+
+        alloc.min_size = height;
+        alloc.natural_size = height;
+    },
+
+    _getPreferredWidth : function (actor, forHeight, alloc) {
+        let primary = Main.layoutManager.primaryMonitor;
+        this._childWidth = this._childHeight * primary.width / primary.height;
+        let width = this._childWidth * global.screen.workspace_grid.columns +
+            this._itemSpacing * (global.screen.workspace_grid.columns - 1);
+
+        alloc.min_size = width;
+        alloc.natural_size = width;
+    },
+
+    _allocate : function (actor, box, flags) {
+        let children = this._list.get_children(),
+            childBox = new Clutter.ActorBox(),
+            x = box.x1,
+            y = box.y1,
+            prevX = x,
+            prevY = y,
+            i = 0;
+        for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
+            x = box.x1;
+            prevX = x;
+            for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
+                childBox.x1 = prevX;
+                childBox.x2 = Math.round(x + this._childWidth);
+                childBox.y1 = prevY;
+                childBox.y2 = Math.round(y + this._childHeight);
+
+                x += this._childWidth + this._itemSpacing;
+                prevX = childBox.x2 + this._itemSpacing;
+                children[i].allocate(childBox, flags);
+                i++;
+                if (i >= MAX_WORKSPACES) {
+                    break;
+                }
+            }
+            if (i >= MAX_WORKSPACES) {
+                break;
+            }
+            prevY = childBox.y2 + this._itemSpacing;
+            y += this._childHeight + this._itemSpacing;
+        }
     },
 
     _redraw: function (direction, activeWorkspaceIndex) {
-        if (!this._grid) {
-            return;
-        }
-
-        // FIXME: don't destroy all the time, only when configuration changes.
-        this._grid.removeAll();
+        this._list.destroy_children();
 
         for (let i = 0; i < global.screen.n_workspaces; ++i) {
-            let icon = new St.Bin({style_class: 'ws-switcher-box'}),
-                primary = Main.layoutManager.primaryMonitor;
-            this._grid.addItem(icon);
-            icon.width = icon.height * primary.width / primary.height;
-        }
+            let indicator = null;
 
-        // It seems they also do row-major layout.
-        let ch = this._grid.getItemAtIndex(activeWorkspaceIndex),
-            style = null;
-        switch (direction) {
-        case UP:
-            style = 'ws-switcher-active-up';
-            break;
-        case DOWN:
-            style = 'ws-switcher-active-down';
-            break;
-        case RIGHT:
-            style = 'ws-switcher-active-right';
-            break;
-        case LEFT:
-            style = 'ws-switcher-active-left';
-            break;
-        }
-        if (style) {
-            ch.remove_style_class_name('ws-switcher-box');
-            ch.add_style_class_name(style);
-        }
+            if (i === activeWorkspaceIndex && direction === UP) {
+                indicator = new St.Bin({
+                    style_class: 'ws-switcher-active-up'
+                });
+            } else if (i === activeWorkspaceIndex && direction === DOWN) {
+                indicator = new St.Bin({
+                    style_class: 'ws-switcher-active-down'
+                });
+            } else if (i === activeWorkspaceIndex && direction === LEFT) {
+                indicator = new St.Bin({
+                    style_class: 'ws-switcher-active-left'
+                });
+            } else if (i === activeWorkspaceIndex && direction === RIGHT) {
+                indicator = new St.Bin({
+                    style_class: 'ws-switcher-active-right'
+                });
+            } else {
+                indicator = new St.Bin({style_class: 'ws-switcher-box'});
+            }
 
-        // FIXME: why does this._container not automatically stretch to
-        // this._grid's height?
-        this._container.height = this._grid._grid.height +
-            this._grid.actor.get_theme_node().get_vertical_padding();
+            this._list.add_actor(indicator);
+        }
     }
 };
 
