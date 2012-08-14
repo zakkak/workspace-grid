@@ -229,16 +229,18 @@ WorkspaceSwitcherPopup.prototype = {
     // note: this makes sure everything fits vertically and then adjust the
     // horizontal to fit.
     _getPreferredHeight : function (actor, forWidth, alloc) {
-        let children = this._list.get_children();
-        let primary = Main.layoutManager.primaryMonitor;
+        let children = this._list.get_children(),
+            primary = Main.layoutManager.primaryMonitor,
+            nrows = global.screen.workspace_grid.rows,
+            availHeight = primary.height,
+            height = 0,
+            spacing = this._itemSpacing * (nrows - 1);
 
-        let availHeight = primary.height;
         availHeight -= Main.panel.actor.height;
         availHeight -= this.actor.get_theme_node().get_vertical_padding();
         availHeight -= this._container.get_theme_node().get_vertical_padding();
         availHeight -= this._list.get_theme_node().get_vertical_padding();
 
-        let height = 0;
         for (let i = 0; i < global.screen.n_workspaces;
                 i += global.screen.workspace_grid.columns) {
             let [childMinHeight, childNaturalHeight] =
@@ -248,23 +250,44 @@ WorkspaceSwitcherPopup.prototype = {
             height += childNaturalHeight * primary.width / primary.height;
         }
 
-        let spacing = this._itemSpacing *
-            (global.screen.workspace_grid.rows - 1);
         height += spacing;
-        height = Math.min(height, availHeight);
 
-        this._childHeight = (height - spacing) /
-            global.screen.workspace_grid.rows;
+        height = Math.min(height, availHeight);
+        this._childHeight = (height - spacing) / nrows;
+
+        // check for horizontal overflow and adjust.
+        let childHeight = this._childHeight;
+        this._getPreferredWidth(actor, -1, {});
+        if (childHeight !== this._childHeight) {
+            // the workspaces will overflow horizontally and ._childWidth &
+            // ._childHeight have been adjusted to make it fit.
+            height = this._childHeight * nrows + spacing;
+            if (height > availHeight) {
+                this._childHeight = (availHeight - spacing) / nrows;
+            }
+        }
 
         alloc.min_size = height;
         alloc.natural_size = height;
     },
 
     _getPreferredWidth : function (actor, forHeight, alloc) {
-        let primary = Main.layoutManager.primaryMonitor;
+        let primary = Main.layoutManager.primaryMonitor,
+            ncols = global.screen.workspace_grid.columns;
         this._childWidth = this._childHeight * primary.width / primary.height;
-        let width = this._childWidth * global.screen.workspace_grid.columns +
-            this._itemSpacing * (global.screen.workspace_grid.columns - 1);
+        let width = this._childWidth * ncols + this._itemSpacing * (ncols - 1),
+            padding = this.actor.get_theme_node().get_horizontal_padding() +
+                      this._list.get_theme_node().get_horizontal_padding() +
+                      this._container.get_theme_node().get_horizontal_padding();
+
+        // but constrain to at most primary.width
+        if (width + padding > primary.width) {
+            this._childWidth = (primary.width - padding -
+                                this._itemSpacing * (ncols - 1)) / ncols;
+            this._childHeight = this._childWidth * primary.height /
+                                primary.width;
+            width = primary.width - padding;
+        }
 
         alloc.min_size = width;
         alloc.natural_size = width;
@@ -289,7 +312,13 @@ WorkspaceSwitcherPopup.prototype = {
 
                 x += this._childWidth + this._itemSpacing;
                 prevX = childBox.x2 + this._itemSpacing;
-                children[i].allocate(childBox, flags);
+                if (children[i]) {
+                    children[i].allocate(childBox, flags);
+                } else {
+                    // this happens sometimes - can't reproduce!
+                    log("WARNING [workspace-grid]: ??UNDEFINED children[i]: " +
+                            i);
+                }
                 i++;
                 if (i >= MAX_WORKSPACES) {
                     break;
