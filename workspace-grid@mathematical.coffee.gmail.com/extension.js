@@ -81,13 +81,14 @@
  *
  * TODO
  * ----
+ * * sometimes on restart in the overview hovering won't make the tab expand.
+ * * test with the remove workspaces display extension.
  * - workspace indicator (which you can toggle on/off) [perhaps separate ext.]
  *   - r-click to rename workspace (meta.prefs_change_workspace_name)
  *   - r-click to adjust rows/cols
  *   - see gnome-panel. (Click to drag ....)
  *   - also workspaceThumbnail ThumbnailsBox shows each window in each workspace
  *     preview - we just want a simplified version of that. (addThumbnails)
- * - ** when it gets too wide collapse it, and make sure it doesn't overflow!
  *
  * GNOME 3.2 <-> GNOME 3.4
  * -----------------------
@@ -105,9 +106,23 @@ const WORKSPACE_CONFIGURATION = {
     columns: 3
 };
 
+// when navigating workspaces do you want to wrap around from the start to the
+// end?
+const WRAPAROUND = true;
+
+// In the overview the workspace thumbnail sidebar can get pretty wide if you
+// have multiple columns of workspaces.
+// The thumbnail sidebar is constrained to be *at most* this wide (fraction of
+// the screen width)
+const MAX_SCREEN_HFRACTION = 0.8;
+// When the thumbnail sidebar becomes wider than this, it will be collapsed by
+// default (so you can hover your mouse over it to expand it).
+// Must be <= MAX_SCREEN_HFRACTION.
+const MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE = 0.3;
+
+////////// CODE ///////////
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
-const Mainloop = imports.mainloop;
 const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
@@ -125,23 +140,22 @@ const DOWN = 'switch_to_workspace_down';
 const LEFT = 'switch_to_workspace_left';
 const RIGHT = 'switch_to_workspace_right';
 
-/* Import some constants from other files and also some laziness */
-const MAX_THUMBNAIL_SCALE = WorkspaceThumbnail.MAX_THUMBNAIL_SCALE;
-const ThumbnailState = WorkspaceThumbnail.ThumbnailState;
-const ThumbnailsBoxProto = WorkspaceThumbnail.ThumbnailsBox.prototype;
-const WorkspacesDisplayProto = WorkspacesView.WorkspacesDisplay.prototype;
-
 /* it seems the max number of workspaces is 36
  * (MAX_REASONABLE_WORKSPACES in mutter/src/core/prefs.c)
  */
 const MAX_WORKSPACES = 36;
+
+/* Import some constants from other files and also some laziness */
+const MAX_THUMBNAIL_SCALE = WorkspaceThumbnail.MAX_THUMBNAIL_SCALE;
+const ThumbnailsBoxProto = WorkspaceThumbnail.ThumbnailsBox.prototype;
+
 
 /* storage for the extension */
 let staticWorkspaceStorage = {};
 let nWorkspaces;
 let workspaceSwitcherPopup = null;
 let globalKeyPressHandler = null;
-let thumbnailBoxStorage = {};
+let onScrollId = 0;
 
 /***************
  * Helper functions
@@ -181,7 +195,7 @@ function rowColToIndex(row, col) {
  * - (other extensions, e.g. navigate with up/down arrows:
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
-function moveWorkspace(direction) {
+function moveWorkspace(direction, wraparound) {
     let from = global.screen.get_active_workspace_index(),
         [row, col] = indexToRowCol(from),
         to;
@@ -201,13 +215,41 @@ function moveWorkspace(direction) {
         break;
     }
     to = rowColToIndex(row, col);
-    if (to < 0) { // if we tried to move to a workspace out of range
-        to = from;
+    if (to < 0) { // if we tried to move to a workspace after MAX_WORKSPACES
+        to = (wraparound ? 0 : from);
+    } else if (to === from && wraparound) {
+        // depends on the direction of scroll.
+        if (to === 0) {
+            to = global.screen.n_workspaces - 1;
+        } else if (to === global.screen.n_workspaces - 1) {
+            to = 0;
+        } else if (direction === LEFT) {
+            // if to === from, we must be at the start of the row.
+            // Go to the end of the previous row.
+            to -= 1;
+        } else if (direction === RIGHT) {
+            // if to === from, we must be at the start of the row.
+            // Go to the start of the next row.
+            to += 1;
+        } else if (direction === UP) {
+            // if to === from, we must be at the start of the column.
+            // Go to the end of the previous column.
+            to = rowColToIndex(global.screen.workspace_grid.rows - 1, col - 1);
+        } else if (direction === DOWN) {
+            // if to === from, we must be at the end of the column.
+            // Go to the start of the next column.
+            to = rowColToIndex(0, col + 1);
+        }
     }
-    // log('moving from workspace %d to %d'.format(from, to));
+
+    //log('moving from workspace %d to %d'.format(from, to));
     if (to !== from) {
         global.screen.get_workspace_by_index(to).activate(
                 global.get_current_time());
+    }
+
+    if (!workspaceSwitcherPopup) {
+        workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
     }
 
     // show the workspace switcher popup
@@ -312,13 +354,7 @@ WorkspaceSwitcherPopup.prototype = {
 
                 x += this._childWidth + this._itemSpacing;
                 prevX = childBox.x2 + this._itemSpacing;
-                if (children[i]) {
-                    children[i].allocate(childBox, flags);
-                } else {
-                    // this happens sometimes - can't reproduce!
-                    log("WARNING [workspace-grid]: ??UNDEFINED children[i]: " +
-                            i);
-                }
+                children[i].allocate(childBox, flags);
                 i++;
                 if (i >= MAX_WORKSPACES) {
                     break;
@@ -370,7 +406,7 @@ function showWorkspaceSwitcher(shellwm, binding, mask, window, backwards) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    moveWorkspace(binding);
+    moveWorkspace(binding, WRAPAROUND);
 }
 
 /******************
@@ -400,16 +436,16 @@ function overrideKeybindingsAndPopup() {
 
         switch (action) {
         case Meta.KeyBindingAction.WORKSPACE_LEFT:
-            moveWorkspace(LEFT);
+            moveWorkspace(LEFT, WRAPAROUND);
             return true;
         case Meta.KeyBindingAction.WORKSPACE_RIGHT:
-            moveWorkspace(RIGHT);
+            moveWorkspace(RIGHT, WRAPAROUND);
             return true;
         case Meta.KeyBindingAction.WORKSPACE_UP:
-            moveWorkspace(UP);
+            moveWorkspace(UP, WRAPAROUND);
             return true;
         case Meta.KeyBindingAction.WORKSPACE_DOWN:
-            moveWorkspace(DOWN);
+            moveWorkspace(DOWN, WRAPAROUND);
             return true;
         }
         return globalKeyPressHandler(actor, event);
@@ -429,14 +465,13 @@ function unoverrideKeybindingsAndPopup() {
                 Main.wm.prototype._showWorkspaceSwitcher));
 
     Main._globalKeyPressHandler = globalKeyPressHandler;
+
+    workspaceSwitcherPopup = null;
 }
 
 /******************
  * Overrides the workspaces display in the overview
  ******************/
-// UPTO
-const MAX_SCREEN_HFRACTION = 1;
-
 function ThumbnailsBox() {
     this._init();
 }
@@ -498,32 +533,24 @@ ThumbnailsBox.prototype = {
      * The following are to get things to layout in a grid
      **/
 
-    // BIG TODO: how to prevent width/height from overflowing the screen?
-    // (e.g. try putting 8 columns of workspaces)
+    // Note: the mode is WIDTH_FOR_HEIGHT
     _getPreferredHeight: function (actor, forWidth, alloc) {
+        let themeNode = this._background.get_theme_node();
+        forWidth = themeNode.adjust_for_width(forWidth);
+
         if (this._thumbnails.length === 0) {
             return;
         }
-        let themeNode = this._background.get_theme_node(),
-            spacing = this.actor.get_theme_node().get_length('spacing'),
+
+        let spacing = this.actor.get_theme_node().get_length('spacing'),
             nRows = global.screen.workspace_grid.rows,
-            nCols = global.screen.workspace_grid.columns,
-            totalSpacingX = (nCols - 1) * spacing,
-            totalSpacingY = (nRows - 1) * spacing,
-            availX = forWidth - totalSpacingX,
-            scale = (availX < 0 ? MAX_THUMBNAIL_SCALE :
-                    (availX / nCols) / this._porthole.width);
+            totalSpacing = (nRows - 1) * spacing,
+            height = totalSpacing + nWorkspaces * this._porthole.height *
+                MAX_THUMBNAIL_SCALE;
 
-        // 'scale' is the scale we need to fit `nCols` of workspaces in the
-        // available width (after taking into account padding).
-        scale = Math.min(scale, MAX_THUMBNAIL_SCALE);
-
-        // natural height is nRows of workspaces + (nRows-1)*spacingY
         [alloc.min_size, alloc.natural_size] =
-            themeNode.adjust_preferred_height(
-                    totalSpacingY,
-                    totalSpacingY + nRows * this._porthole.height * scale
-        );
+            themeNode.adjust_preferred_height(height, height);
+
     },
 
     _getPreferredWidth: function (actor, forHeight, alloc) {
@@ -546,17 +573,37 @@ ThumbnailsBox.prototype = {
         // available height (after taking into account padding).
         scale = Math.min(scale, MAX_THUMBNAIL_SCALE);
 
+        let width = totalSpacingX + nCols * this._porthole.width * scale,
+            maxWidth = (Main.layoutManager.primaryMonitor.width *
+                            MAX_SCREEN_HFRACTION) -
+                       this.actor.get_theme_node().get_horizontal_padding() -
+                       themeNode.get_horizontal_padding();
+
+        width = Math.min(maxWidth, width);
+
+        // If the thumbnails box is "too wide" (see
+        //  MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE), then we should always
+        //  collapse the workspace thumbnails by default.
+        Main.overview._workspacesDisplay._alwaysZoomOut = (width <=
+                (Main.layoutManager.primaryMonitor.width *
+                 MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE));
+        
         // natural width is nCols of workspaces + (nCols-1)*spacingX
         [alloc.min_size, alloc.natural_size] =
-            themeNode.adjust_preferred_height(
-                    totalSpacingX,
-                    totalSpacingX + nCols * this._porthole.width * scale
-        );
+            themeNode.adjust_preferred_width(width, width);
     },
 
     _allocate: function (actor, box, flags) {
         if (this._thumbnails.length === 0) // not visible
             return;
+
+        if (global.screen.n_workspaces !==
+                global.screen.workspace_grid.columns *
+                global.screen.workspace_grid.rows) {
+            // the user has just restarted the shell with a new number of
+            // workspaces and we have to wait for these two values to come
+            // into sync before allocating.
+        }
 
         let rtl = (Clutter.get_default_text_direction() ===
                 Clutter.TextDirection.RTL),
@@ -574,10 +621,8 @@ ThumbnailsBox.prototype = {
             availX = (contentBox.x2 - contentBox.x1) - totalSpacingX,
             availY = (contentBox.y2 - contentBox.y1) - totalSpacingY;
 
-        // TODO: why not .get_preferred_width(box.y2 - box.y1) ??
-
         // work out what scale we need to squeeze all the rows/cols of
-        // workspaces in (TODO: limit to MAX_SCREEN_HFRACTION in width?)
+        // workspaces in
         let newScale = Math.min((availX / nCols) / portholeWidth,
                             (availY / nRows) / portholeHeight,
                             MAX_THUMBNAIL_SCALE);
@@ -691,60 +736,73 @@ ThumbnailsBox.prototype = {
         childBox.y1 = indicatorY;
         childBox.y2 = indicatorY + thumbnailHeight;
         this._indicator.allocate(childBox, flags);
-    },
-
-    destroy: function () {
-        this.actor.destroy();
     }
 };
 
+/**
+ * We need to:
+ * 1) override the scroll event on workspaces display to allow sideways
+ *    scrolling too
+ * 2) replace the old thumbnailsBox with our own (because you can't
+ *    override ._getPreferredHeight etc that are passed in as *callbacks*).
+ */
 function overrideWorkspaceDisplay() {
-    // FIXME: Why can I not override ThumbnailsBox._init,
-    // _getPreferredWidth, _getPreferredHeight or _allocate, but I *can*
-    // override (say) show?
-
-    Mainloop.idle_add(function () {
-        let wD = Main.overview._workspacesDisplay;
-
-        thumbnailBoxStorage.original = wD._thumbnailsBox;
-        thumbnailBoxStorage.new = new ThumbnailsBox();
-
-        wD._controls.remove_actor(wD._thumbnailsBox.actor);
-        wD._thumbnailsBox = thumbnailBoxStorage.new;
-        wD._controls.add_actor(wD._thumbnailsBox.actor);
-
-        // add the ability to scroll sideways over the thumbnails too
-        thumbnailBoxStorage._onScrollEvent =
-            WorkspacesDisplayProto._onScrollEvent;
-        WorkspacesDisplayProto._onScrollEvent = function (actor, event) {
-            switch (event.get_scroll_direction()) {
-            case Clutter.ScrollDirection.UP:
-                moveWorkspace(UP);
-                break;
-            case Clutter.ScrollDirection.DOWN:
-                moveWorkspace(DOWN);
-                break;
-            case Clutter.ScrollDirection.LEFT:
-                moveWorkspace(LEFT);
-                break;
-            case Clutter.ScrollDirection.RIGHT:
-                moveWorkspace(RIGHT);
-                break;
-            }
-        };
+    // 1) override scroll event. Note we can't just overwrite
+    // .prototype._onScrollEvent because somehow by then the old _onScrollEvent
+    // is already bound to the 'scroll-event' signal.
+    // We'll have to destroy controls and re-create it (because it doesn't even
+    // have .disconnectAll()!)
+    // The following mirrors _init in WorkspacesDisplay.
+    let wD = Main.overview._workspacesDisplay;
+    let controls = wD._controls = new St.Bin({
+        style_class: 'workspace-controls',
+        request_mode: Clutter.RequestMode.WIDTH_FOR_HEIGHT,
+        y_align: St.Align.START,
+        y_fill: true
     });
+    wD.actor.add_actor(controls);
+    controls.reactive = true;
+    controls.track_hover = true;
+    controls.connect('notify::hover', Lang.bind(wD, wD._onControlsHoverChanged));
+    controls.connect('scroll-event', Lang.bind(wD, function (actor, event) {
+        switch (event.get_scroll_direction()) {
+        case Clutter.ScrollDirection.UP:
+            moveWorkspace(UP, WRAPAROUND);
+            break;
+        case Clutter.ScrollDirection.DOWN:
+            moveWorkspace(DOWN, WRAPAROUND);
+            break;
+        case Clutter.ScrollDirection.LEFT:
+            moveWorkspace(LEFT, WRAPAROUND);
+            break;
+        case Clutter.ScrollDirection.RIGHT:
+            moveWorkspace(RIGHT, WRAPAROUND);
+            break;
+        }
+    }));
+
+    // 2. Replace workspacesDisplay._thumbnailsBox with my own.
+    // Start with controls collapsed (since the workspace thumbnails can take
+    // up quite a bit of space horizontally). This will be recalculated
+    // every time the overview shows.
+    controls.remove_actor(wD._thumbnailsBox.actor);
+    let box = wD._thumbnailsBox = new ThumbnailsBox();
+    controls.add_actor(box.actor);
+    wD._alwaysZoomOut = false;
 }
 
 function unoverrideWorkspaceDisplay() {
     let wD = Main.overview._workspacesDisplay;
+    // put the original _scrollEvent back again
+    wD._controls.disconnect(onScrollId);
+    wD._controls.connect('scroll-event', Lang.bind(wD, wD._onScrollEvent));
 
+    // replace the ThumbnailsBox with the original one
     wD._controls.remove_actor(wD._thumbnailsBox.actor);
-    wD._thumbnailsBox.destroy();
-
-    wD._thumbnailsBox = thumbnailBoxStorage.old;
-    wD._controls.add_actor(wD._thumbnailsBox.actor);
-
-    thumbnailBoxStorage = {};
+    wD._thumbnailsBox.actor.destroy();
+    let box = wD._thumbnailsBox = new WorkspaceThumbnail.ThumbnailsBox();
+    wD._controls.add_actor(box.actor);
+    wD._updateAlwaysZoom(); // undo our zoom changes.
 }
 
 /******************
@@ -885,18 +943,6 @@ function enable() {
     modifyNumWorkspaces();
     overrideKeybindingsAndPopup();
     overrideWorkspaceDisplay();
-
-    // create a workspace switcher popup (no hurry; wait until there's free
-    // CPU)
-    Mainloop.idle_add(function () {
-        workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
-        // FIXME: for some reason the height is off the first time.
-        // A quick show/hide will do the trick but surely there's a better way
-        // (i.e. a reason why this occurs and I can address that directly)
-        workspaceSwitcherPopup.actor.show();
-        workspaceSwitcherPopup.actor.hide();
-        return false;
-    });
 }
 
 function disable() {
@@ -905,6 +951,4 @@ function disable() {
     unmodifyNumWorkspaces();
     unexportFunctionsAndConstants();
     unmakeWorkspacesStatic();
-
-    workspaceSwitcherPopup = null;
 }
