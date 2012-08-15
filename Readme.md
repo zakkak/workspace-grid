@@ -7,8 +7,14 @@ This extension extends the [Frippery Static Workspaces extension](https://extens
 * updating the workspaces display in the overview to reflect the workspace grid layout
 * updating the workspace switcher/keybindings to reflect the workspace grid layout
 * (optionally) adding a visual workspace indicator. (TODO: separate extension?)
+
 TODO: 
 Screenshot of the extension.
+
+Note - if you do not want the workspace thumbnail preview in the overview, use the [Remove Workspaces Sidebar extension](https://extensions.gnome.org/extension/387/remove-workspaces-sidebar/).
+
+### Known Issues
+* If you have many horizontal workspaces, the workspace display in the overview will be wider than the screen.
 
 Written 2012 by mathematical.coffee [mathematical.coffee@gmail.com](mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question).   
 Project webpage: [at  bitbucket](https://bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension).
