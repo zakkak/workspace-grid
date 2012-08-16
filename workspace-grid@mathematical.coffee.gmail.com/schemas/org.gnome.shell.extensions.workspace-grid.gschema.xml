@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="workspace-grid">
+    <schema path="/org/gnome/shell/extensions/workspace-grid/" id="org.gnome.shell.extensions.workspace-grid">
+    <key type="i" name="num-columns">
+      <default>3</default>
+      <range min="1" max="36"/>
+      <summary>Number of columns of workspaces</summary>
+      <description>Number of columns of workspaces. Total number of workspaces must not be more than 36.</description>
+    </key>
+    <key type="i" name="num-rows">
+      <default>2</default>
+      <range min="1" max="36"/>
+      <summary>Number of rows of workspaces</summary>
+      <description>Number of rows of workspaces. Total number of workspaces must not be more than 36.</description>
+    </key>
+    <key type="b" name="wraparound">
+      <default>false</default>
+      <summary>Whether to wrap around when navigating workspaces.</summary>
+      <description>Whether to wrap from (say) the end of the row back to the front of the row when navigating workspaces (e.g. with the keybindings)</description>
+    </key>
+    <key type="d" name="max-screen-fraction">
+      <default>0.7</default>
+      <range min="0" max="1.0"/>
+      <summary>Maximum fraction of the screen workspace thumbnails are allowed to take up in the overview.</summary>
+      <description>Maximum (horizontal) fraction of the screen the workspace thumbnails are allowed to take up in the overview.</description>
+    </key>
+    <key type="d" name="max-screen-fraction-before-collapse">
+      <default>0.3</default>
+      <range min="0" max="1.0"/>
+      <summary>Maximum fraction of the screen workspace thumbnails may take up before collapsing in the overview.</summary>
+      <description>Maximum (horizontal) fraction of the screen the workspace thumbnails are allowed to take up in the overview before the workspace thumbnail box intialised collapsed (hover to open).</description>
+    </key>
+
+  </schema>
+</schemalist>

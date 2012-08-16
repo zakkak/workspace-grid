@@ -28,3 +28,10 @@
     border-radius: 24px;
     padding: 20px;
 }
+
+/* FIXME: include the horizontal .placeholder here? */
+.placeholder-vertical {
+    background-image: url("dash-placeholder-vertical.svg");
+    background-size: contain;
+    width: 24px;
+}

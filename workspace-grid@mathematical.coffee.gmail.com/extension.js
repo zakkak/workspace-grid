@@ -1,4 +1,5 @@
 /*global global, log */ // <-- jshint
+/*jshint unused: true */
 /* Workspaces Grid GNOME shell extension.
  *
  * mathematical.coffee <mathematical.coffee@gmail.com>
@@ -82,6 +83,9 @@
  * TODO
  * ----
  * * sometimes on restart in the overview hovering won't make the tab expand.
+ * * restarting with a larger number of workspaces causes 'children[i] is
+ *   undefined'. (GNOME 3.4: prefs_set_num_worspaces does not work: investigate
+ *   registry?)
  * * test with the remove workspaces display extension.
  * - workspace indicator (which you can toggle on/off) [perhaps separate ext.]
  *   - r-click to rename workspace (meta.prefs_change_workspace_name)
@@ -97,6 +101,7 @@
  * - keybinding callback: wm, binding, mask, window, backwards ->
  *    display, screen, window, binding
  * - keybinding callback: binding -> binding.get_name()
+ * - destroy_children <-> destroy_all_children
  *
  */
 
@@ -127,6 +132,7 @@ const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 
+const DND = imports.ui.dnd;
 const Main = imports.ui.main;
 const Tweener = imports.ui.tweener;
 const WorkspaceSwitcher = imports.ui.workspaceSwitcherPopup;
@@ -149,10 +155,10 @@ const RIGHT = 'switch-to-workspace-right';
  */
 const MAX_WORKSPACES = 36;
 
-/* Import some constants from other files and also some laziness */
+/* Import some constants from other files */
 const MAX_THUMBNAIL_SCALE = WorkspaceThumbnail.MAX_THUMBNAIL_SCALE;
-const ThumbnailsBoxProto = WorkspaceThumbnail.ThumbnailsBox.prototype;
-
+const WORKSPACE_CUT_SIZE = WorkspaceThumbnail.WORKSPACE_CUT_SIZE;
+const ThumbnailState = WorkspaceThumbnail.ThumbnailState;
 
 /* storage for the extension */
 let staticWorkspaceStorage = {};
@@ -265,12 +271,9 @@ function moveWorkspace(direction, wraparound) {
 /************
  * Workspace Switcher that can do rows and columns as opposed to just rows.
  ************/
-function WorkspaceSwitcherPopup() {
-    this._init(this);
-}
-
-WorkspaceSwitcherPopup.prototype = {
-    __proto__: WorkspaceSwitcher.WorkspaceSwitcherPopup.prototype,
+const WorkspaceSwitcherPopup = new Lang.Class({
+    Name: 'WorkspaceSwitcherPopup',
+    Extends: WorkspaceSwitcher.WorkspaceSwitcherPopup,
 
     // note: this makes sure everything fits vertically and then adjust the
     // horizontal to fit.
@@ -291,8 +294,7 @@ WorkspaceSwitcherPopup.prototype = {
                 i += global.screen.workspace_grid.columns) {
             let [childMinHeight, childNaturalHeight] =
                 children[i].get_preferred_height(-1);
-            let [childMinWidth, childNaturalWidth] =
-                children[i].get_preferred_width(childNaturalHeight);
+            children[i].get_preferred_width(childNaturalHeight);
             height += childNaturalHeight * primary.width / primary.height;
         }
 
@@ -373,7 +375,7 @@ WorkspaceSwitcherPopup.prototype = {
     },
 
     _redraw: function (direction, activeWorkspaceIndex) {
-        this._list.destroy_children();
+        this._list.destroy_all_children();
 
         for (let i = 0; i < global.screen.n_workspaces; ++i) {
             let indicator = null;
@@ -401,7 +403,7 @@ WorkspaceSwitcherPopup.prototype = {
             this._list.add_actor(indicator);
         }
     }
-};
+});
 
 /* Keybinding handler.
  * Should bring up a workspace switcher.
@@ -466,13 +468,13 @@ function overrideKeybindingsAndPopup() {
 function unoverrideKeybindingsAndPopup() {
     // Restore t
     Meta.keybindings_set_custom_handler(LEFT, Lang.bind(Main.wm,
-                Main.wm.prototype._showWorkspaceSwitcher));
+                Main.wm._showWorkspaceSwitcher));
     Meta.keybindings_set_custom_handler(RIGHT, Lang.bind(Main.wm,
-                Main.wm.prototype._showWorkspaceSwitcher));
+                Main.wm._showWorkspaceSwitcher));
     Meta.keybindings_set_custom_handler(UP, Lang.bind(Main.wm,
-                Main.wm.prototype._showWorkspaceSwitcher));
+                Main.wm._showWorkspaceSwitcher));
     Meta.keybindings_set_custom_handler(DOWN, Lang.bind(Main.wm,
-                Main.wm.prototype._showWorkspaceSwitcher));
+                Main.wm._showWorkspaceSwitcher));
 
     Main._globalKeyPressHandler = globalKeyPressHandler;
 
@@ -482,26 +484,227 @@ function unoverrideKeybindingsAndPopup() {
 /******************
  * Overrides the workspaces display in the overview
  ******************/
-function ThumbnailsBox() {
-    this._init();
-}
-ThumbnailsBox.prototype = {
-    // NOTES ON SIZING
-    // ---------------
-    // We can use up to the entire height of the screen for vertical positioning
-    // We can use up to (???) fraction of the width for horizontal positioning
-    // Pick the scale that makes it fit.
-    __proto__: ThumbnailsBoxProto,
+const ThumbnailsBox = new Lang.Class({
+    Name: 'ThumbnailsBox',
+    Extends: WorkspaceThumbnail.ThumbnailsBox,
 
     /**
      * The following are overridden simply to incorporate ._indicatorX in the
      * same way as ._indicatorY
      **/
     _init: function () {
-        ThumbnailsBoxProto._init.apply(this);
+        // Note: we could just call this.parent(); this._inicatorX = 0; but
+        // instead we replicate this.parent()'s code here so we can store
+        // the signal IDs (it connects to Main.overview) so that we can delete
+        // them properly on destroy!
+
+        //this.parent(); Equivalent to:
+        this.actor = new Shell.GenericContainer({
+            reactive: true,
+            style_class: 'workspace-thumbnails',
+            request_mode: Clutter.RequestMode.WIDTH_FOR_HEIGHT
+        });
+        this.actor.connect('get-preferred-width',
+            Lang.bind(this, this._getPreferredWidth));
+        this.actor.connect('get-preferred-height',
+                Lang.bind(this, this._getPreferredHeight));
+        this.actor.connect('allocate', Lang.bind(this, this._allocate));
+        this.actor._delegate = this;
+
+        this._background = new St.Bin({
+            style_class: 'workspace-thumbnails-background'
+        });
+
+        this.actor.add_actor(this._background);
+
+        let indicator = new St.Bin({
+            style_class: 'workspace-thumbnail-indicator'
+        });
+
+        // We don't want the indicator to affect drag-and-drop
+        Shell.util_set_hidden_from_pick(indicator, true);
+
+        this._indicator = indicator;
+        this.actor.add_actor(indicator);
+
+        this._dropWorkspace = -1;
+        this._dropPlaceholderPos = -1;
+        this._dropPlaceholder = new St.Bin({ style_class: 'placeholder' });
+        this.actor.add_actor(this._dropPlaceholder);
+
+        this._targetScale = 0;
+        this._scale = 0;
+        this._pendingScaleUpdate = false;
+        this._stateUpdateQueued = false;
+        this._animatingIndicator = false;
+        this._indicatorY = 0; // only used when _animatingIndicator is true
+
+        this._stateCounts = {};
+        for (let key in ThumbnailState) {
+            if (ThumbnailState.hasOwnProperty(key)) {
+                this._stateCounts[ThumbnailState[key]] = 0;
+            }
+        }
+
+        this._thumbnails = [];
+
+        this.actor.connect('button-press-event', function () { return true; });
+        this.actor.connect('button-release-event',
+                Lang.bind(this, this._onButtonRelease));
+
+        // Change: STORE these signals so we can disconnect on destroy.
+        this._signals = [];
+        this._signals.push(Main.overview.connect('item-drag-begin',
+              Lang.bind(this, this._onDragBegin)));
+        this._signals.push(Main.overview.connect('item-drag-end',
+              Lang.bind(this, this._onDragEnd)));
+        this._signals.push(Main.overview.connect('item-drag-cancelled',
+              Lang.bind(this, this._onDragCancelled)));
+        this._signals.push(Main.overview.connect('window-drag-begin',
+              Lang.bind(this, this._onDragBegin)));
+        this._signals.push(Main.overview.connect('window-drag-end',
+              Lang.bind(this, this._onDragEnd)));
+        this._signals.push(Main.overview.connect('window-drag-cancelled',
+              Lang.bind(this, this._onDragCancelled)));
+
+        // end this.parent()
+
         this._indicatorX = 0; // to match indicatorY
+        this._dropPlaceholderHorizontal = true;
     },
 
+    /* when the user clicks on a thumbnail take into account the x position
+     * of that thumbnail as well as the y to determine which was clicked */
+    _onButtonRelease: function (actor, event) {
+        let [stageX, stageY] = event.get_coords();
+        let [r, x, y] = this.actor.transform_stage_point(stageX, stageY);
+
+        for (let i = 0; i < this._thumbnails.length; i++) {
+            let thumbnail = this._thumbnails[i];
+            let [w, h] = thumbnail.actor.get_transformed_size();
+            // add in the x criteria
+            if (y >= thumbnail.actor.y && y <= thumbnail.actor.y + h &&
+                    x >= thumbnail.actor.x && x <= thumbnail.actor.x + w) {
+                thumbnail.activate(event.time);
+                break;
+            }
+        }
+
+        return true;
+    },
+
+    /* with drag and drop: modify to look at the x direction as well as the y */
+    handleDragOver: function (source, actor, x, y, time) {
+        if (!source.realWindow && !source.shellWorkspaceLaunch &&
+                source !== Main.xdndHandler)
+            return DND.DragMotionResult.CONTINUE;
+
+        if (!Meta.prefs_get_dynamic_workspaces())
+            return DND.DragMotionResult.CONTINUE;
+
+        let targetBaseX,
+            targetBaseY,
+            spacing = this.actor.get_theme_node().get_length('spacing'),
+            placeholderPos = -1,
+            placeholderOrient = -1;
+
+        this._dropWorkspace = -1;
+        if (this._dropPlaceholderPos === 0) {
+            targetBaseX = this._dropPlaceholder.x;
+            targetBaseY = this._dropPlaceholder.y;
+        } else {
+            targetBaseX = this._thumbnails[0].actor.x;
+            targetBaseY = this._thumbnails[0].actor.y;
+            log('startX: %d, startY: %d'.format(targetBaseX, targetBaseY));
+        }
+        // UPTO: FIXME: you have to iterate row/col and increment X/Y like that.
+        let targetLeft = targetBaseX - spacing - WORKSPACE_CUT_SIZE,
+            targetTop = targetBaseY - spacing - WORKSPACE_CUT_SIZE;
+        for (let i = 0; i < this._thumbnails.length; i++) {
+            log('top-left corner workspace %d: %d, %d'.format(i,
+                        this._thumbnails[i].actor.x, this._thumbnails[i].actor.y));
+            // Allow the reorder target to have a 10px "cut" into
+            // each side of the thumbnail, to make dragging onto the
+            // placeholder easier
+            let [row, col] = indexToRowCol(i);
+            let [w, h] = this._thumbnails[i].actor.get_transformed_size();
+            //log('width: %d, height: %d'.format(w, h)); // fine
+            let targetRight = targetBaseX + WORKSPACE_CUT_SIZE;
+            let targetBottom = targetBaseY + WORKSPACE_CUT_SIZE;
+            log('targetTop: %d, targetBottom: %d, targetLeft: %d, targetRight: %d'.format(
+                        targetTop, targetBottom, targetLeft, targetRight));
+
+            let nextTargetBaseX = targetBaseX + w + spacing,
+                nextTargetBaseY = targetBaseY + h + spacing,
+                nextTargetLeft =  nextTargetBaseX - spacing -
+                    ((col === global.screen.workspace_grid.cols - 1) ? 0 :
+                         WORKSPACE_CUT_SIZE),
+                nextTargetTop =  nextTargetBaseY - spacing -
+                    ((row === global.screen.workspace_grid.rows - 1) ? 0 :
+                         WORKSPACE_CUT_SIZE);
+            log('nextTargetBaseX: %d, nextTargetBaseY: %d, nextTargetLeft: %d, nextTargetRight: %d'.format(nextTargetBaseX, nextTargetBaseY, nextTargetLeft, nextTargetTop));
+
+            // Expand the target to include the placeholder, if it exists.
+            if (i === this._dropPlaceholderPos) {
+                targetRight += this._dropPlaceholder.get_width();
+                targetBottom += this._dropPlaceholder.get_height();
+            }
+
+            if (y > targetTop && y <= targetBottom &&
+                    //x >= targetBaseX && x <= (targetBaseX + w) &&
+                    source !== Main.xdndHandler) {
+                log('x: %d, y: %d, in target area above WS %d'.format(
+                            x, y, i));
+                // workspace is placed 
+                log('placeholder horizontally before workspace ' + i);
+                placeholderPos = i;
+                placeholderOrient = true;
+                break;
+            } else if (x > targetLeft && x <= targetRight &&
+                    y >= targetBaseY && y <= (targetBaseY + h) &&
+                    source !== Main.xdndHandler) {
+                log('placeholder vertically after workspace ' + i);
+                placeholderPos = i;
+                placeholderOrient = false;
+                break;
+            } else if (y > targetBottom && y <= nextTargetTop &&
+                    x > targetLeft && x <= nextTargetLeft) {
+                this._dropWorkspace = i;
+                break;
+            }
+
+            targetBaseX = nextTargetBaseX;
+            targetBaseY = nextTargetBaseY;
+            targetTop = nextTargetTop; // THESE ARE GOING WRONG
+            targetLeft = nextTargetLeft; // THESE ARE GOING WRONG
+        }
+
+        if (this._dropPlaceholderPos !== placeholderPos ||
+            (placeholderOrient !== -1 &&
+                 this._dropPlaceholderHorizontal !== placeholderOrient)) {
+            this._dropPlaceholderPos = placeholderPos;
+            this._dropPlaceholderHorizontal = placeholderOrient;
+            if (this._dropPlaceholderHorizontal &&
+                    this._dropPlaceholder.has_style_class_name('placeholder-vertical')) {
+                this._dropPlaceholder.style_class = 'placeholder';
+            } else if (!this._dropPlaceholderHorizontal &&
+                    this._dropPlaceholder.has_style_class_name('placeholder')) {
+                this._dropPlaceholder.style_class = 'placeholder-vertical';
+            }
+            this.actor.queue_relayout();
+        }
+
+        if (this._dropWorkspace !== -1)
+            return this._thumbnails[this._dropWorkspace].handleDragOverInternal(
+                    source, time);
+        else if (this._dropPlaceholderPos !== -1)
+            return source.realWindow ? DND.DragMotionResult.MOVE_DROP :
+                DND.DragMotionResult.COPY_DROP;
+        else
+            return DND.DragMotionResult.CONTINUE;
+    },
+
+    /* stuff to do with the indicator around the current workspace */
     set indicatorX(indicatorX) {
         this._indicatorX = indicatorX;
         //this.actor.queue_relayout(); // <-- we only ever change indicatorX
@@ -541,9 +744,11 @@ ThumbnailsBox.prototype = {
 
     /**
      * The following are to get things to layout in a grid
+     * Note: the mode is WIDTH_FOR_HEIGHT, and we make sure that the box is
+     * no wider than MAX_SCREEN_HFRACTION fraction of the screen width wide.
+     * If it is wider than MAX_SCREEN_HFRACTION_COLLAPSE then we initially
+     * start the thumbnails box collapsed.
      **/
-
-    // Note: the mode is WIDTH_FOR_HEIGHT
     _getPreferredHeight: function (actor, forWidth, alloc) {
         let themeNode = this._background.get_theme_node();
         forWidth = themeNode.adjust_for_width(forWidth);
@@ -597,7 +802,7 @@ ThumbnailsBox.prototype = {
         Main.overview._workspacesDisplay._alwaysZoomOut = (width <=
                 (Main.layoutManager.primaryMonitor.width *
                  MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE));
-        
+
         // natural width is nCols of workspaces + (nCols-1)*spacingX
         [alloc.min_size, alloc.natural_size] =
             themeNode.adjust_preferred_width(width, width);
@@ -683,6 +888,13 @@ ThumbnailsBox.prototype = {
             i = 0,
             thumbnail;
 
+        if (this._dropPlaceholderPos === -1) {
+            Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this,
+                function () {
+                    this._dropPlaceholder.hide();
+                }));
+        }
+
         for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
             x = contentBox.x1;
             for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
@@ -693,8 +905,7 @@ ThumbnailsBox.prototype = {
                 // spaced; we don't bother because I'm not smart enough to work
                 // it out (so the spacing on the left might be a few pixels
                 // more than that on the right).
-                let x1 = x,
-                    y1 = y;
+                let x1 = x;
 
                 if (thumbnail.slidePosition !== 0) {
                     if (rtl) {
@@ -704,8 +915,40 @@ ThumbnailsBox.prototype = {
                     }
                 }
 
+                // TODO UPTO
+                // NOTE: Need ORIENTATION
+                if (i === this._dropPlaceholderPos) {
+                    log('adding placeholder for workspace ' + i);
+                    if (this._dropPlaceholderHorizontal) {
+                        let [minHeight, placeholderHeight] =
+                            this._dropPlaceholder.get_preferred_height(-1);
+                        childBox.x1 = x1;
+                        childBox.x2 = x1 + thumbnailWidth;
+                        childBox.y1 = y;
+                        childBox.y2 = y + placeholderHeight;
+
+                        y += placeholderHeight + spacing;
+                        x += thumbnailWidth + spacing;
+                    } else {
+                        let [minWidth, placeholderWidth] =
+                            this._dropPlaceholder.get_preferred_width(-1);
+                        childBox.x1 = x1;
+                        childBox.x2 = x1 + placeholderWidth;
+                        childBox.y1 = y;
+                        childBox.y2 = y + thumbnailHeight;
+
+                        y += placeholderWidth + spacing;
+                        x += thumbnailHeight + spacing;
+                    }
+                    this._dropPlaceholder.allocate(childBox, flags);
+                    Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this,
+                        function () {
+                            this._dropPlaceholder.show();
+                        }));
+                }
+
                 if (thumbnail.metaWorkspace === indicatorWorkspace) {
-                    indicatorY = y1;
+                    indicatorY = y;
                     indicatorX = x1;
                 }
 
@@ -714,8 +957,8 @@ ThumbnailsBox.prototype = {
                 // size.
                 childBox.x1 = x1;
                 childBox.x2 = x1 + portholeWidth;
-                childBox.y1 = y1;
-                childBox.y2 = y1 + portholeHeight;
+                childBox.y1 = y;
+                childBox.y2 = y + portholeHeight;
 
                 thumbnail.actor.set_scale(roundedHScale, roundedVScale);
                 thumbnail.actor.allocate(childBox, flags);
@@ -746,8 +989,17 @@ ThumbnailsBox.prototype = {
         childBox.y1 = indicatorY;
         childBox.y2 = indicatorY + thumbnailHeight;
         this._indicator.allocate(childBox, flags);
+    },
+
+    destroy: function () {
+        this.actor.destroy();
+        let i = this._signals.length;
+        while (i--) {
+            Main.overview.disconnect(this._signals[i]);
+        }
+        this._signals[i] = [];
     }
-};
+});
 
 /**
  * We need to:
@@ -809,7 +1061,7 @@ function unoverrideWorkspaceDisplay() {
 
     // replace the ThumbnailsBox with the original one
     wD._controls.remove_actor(wD._thumbnailsBox.actor);
-    wD._thumbnailsBox.actor.destroy();
+    wD._thumbnailsBox.destroy();
     let box = wD._thumbnailsBox = new WorkspaceThumbnail.ThumbnailsBox();
     wD._controls.add_actor(box.actor);
     wD._updateAlwaysZoom(); // undo our zoom changes.
@@ -947,12 +1199,27 @@ function unexportFunctionsAndConstants() {
 function init() {
 }
 
+let onetime;
 function enable() {
     makeWorkspacesStatic();
     exportFunctionsAndConstants(); // so other extension authors can use.
     modifyNumWorkspaces();
     overrideKeybindingsAndPopup();
-    overrideWorkspaceDisplay();
+    // TODO: n-workspaces (prefs.js)
+    if (global.screen.workspace_grid && (global.screen.n_workspaces !==
+                global.screen.workspace_grid.rows * global.screen.workspace_grid.columns)) {
+        onetime = global.screen.connect('notify::n-workspaces', function () {
+            log('notify::n-workspaces. n_workspaces: %d. rows: %d. columns: %d'.format(global.screen.n_workspaces, global.screen.workspace_grid.rows, global.screen.workspace_grid.columns));
+            if (global.screen.workspace_grid && (global.screen.n_workspaces !==
+                global.screen.workspace_grid.rows * global.screen.workspace_grid.columns)) {
+                global.screen.disconnect(onetime);
+                onetime = 0;
+                overrideWorkspaceDisplay();
+            }
+        });
+    } else {
+        overrideWorkspaceDisplay();
+    }
 }
 
 function disable() {
