@@ -74,8 +74,13 @@
  * From GNOME 3.4+ to keep workspaces static we can just do:
  * - org.gnome.shell.overrides.dynamic-workspaces false
  * - org.gnome.desktop.wm.preferences.num-workspaces <numworkspaces>
- * (TODO: report of this losing the ability to drag n drop applications between
- * workspaces - check).
+ * However then you can't drag/drop applications between workspaces (GNOME 3.4.1
+ * anyway)
+ *
+ * **BIG TODO:** however, in GNOME 3.4 when we do Meta.prefs_set_num_workspaces,
+ * if dynamic-workspaces is TRUE, global.screen.n_workspaces does NOT get updated
+ * and notify::n-workspaces does NOT get sent --> have to use global.screen.append_new_wokrpsace
+ * With dynamic-workspaces to FALSE, everything works fine.
  *
  * See also the edited workspaces indicator
  * http://kubiznak-petr.ic.cz/en/workspace-indicator.php (this is column-major).
@@ -149,7 +154,10 @@ let staticWorkspaceStorage = {};
 let nWorkspaces;
 let workspaceSwitcherPopup = null;
 let globalKeyPressHandler = null;
+let thumbnailsBox = null;
 let onScrollId = 0;
+let onetime = 0;
+let settings = 0;
 
 /***************
  * Helper functions
@@ -396,7 +404,7 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    moveWorkspace(binding.get_name(), settings.get_bool(KEY_WRAPAROUND));
+    moveWorkspace(binding.get_name(), settings.get_boolean(KEY_WRAPAROUND));
 }
 
 /******************
@@ -432,16 +440,16 @@ function overrideKeybindingsAndPopup() {
 
         switch (action) {
         case Meta.KeyBindingAction.WORKSPACE_LEFT:
-            moveWorkspace(LEFT, settings.get_bool(KEY_WRAPAROUND));
+            moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
             return true;
         case Meta.KeyBindingAction.WORKSPACE_RIGHT:
-            moveWorkspace(RIGHT, settings.get_bool(KEY_WRAPAROUND));
+            moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
             return true;
         case Meta.KeyBindingAction.WORKSPACE_UP:
-            moveWorkspace(UP, settings.get_bool(KEY_WRAPAROUND));
+            moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
             return true;
         case Meta.KeyBindingAction.WORKSPACE_DOWN:
-            moveWorkspace(DOWN, settings.get_bool(KEY_WRAPAROUND));
+            moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
             return true;
         }
         return globalKeyPressHandler(actor, event);
@@ -639,7 +647,7 @@ const ThumbnailsBox = new Lang.Class({
                     source !== Main.xdndHandler) {
                 log('x: %d, y: %d, in target area above WS %d'.format(
                             x, y, i));
-                // workspace is placed 
+                // workspace is placed
                 log('placeholder horizontally before workspace ' + i);
                 placeholderPos = i;
                 placeholderOrient = true;
@@ -985,6 +993,14 @@ const ThumbnailsBox = new Lang.Class({
     }
 });
 
+/* Get the thumbnails box to acknowledge a change in allowable width */
+function refreshThumbnailsBox() {
+    // this is the only way I can find to get the thumbnailsbox to
+    // re-allocate itself
+    Main.overview._workspacesDisplay.show();
+    Main.overview._workspacesDisplay.hide();
+}
+
 /**
  * We need to:
  * 1) override the scroll event on workspaces display to allow sideways
@@ -1013,16 +1029,16 @@ function overrideWorkspaceDisplay() {
     controls.connect('scroll-event', Lang.bind(wD, function (actor, event) {
         switch (event.get_scroll_direction()) {
         case Clutter.ScrollDirection.UP:
-            moveWorkspace(UP, settings.get_bool(KEY_WRAPAROUND));
+            moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
             break;
         case Clutter.ScrollDirection.DOWN:
-            moveWorkspace(DOWN, settings.get_bool(KEY_WRAPAROUND));
+            moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
             break;
         case Clutter.ScrollDirection.LEFT:
-            moveWorkspace(LEFT, settings.get_bool(KEY_WRAPAROUND));
+            moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
             break;
         case Clutter.ScrollDirection.RIGHT:
-            moveWorkspace(RIGHT, settings.get_bool(KEY_WRAPAROUND));
+            moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
             break;
         }
     }));
@@ -1032,9 +1048,11 @@ function overrideWorkspaceDisplay() {
     // up quite a bit of space horizontally). This will be recalculated
     // every time the overview shows.
     controls.remove_actor(wD._thumbnailsBox.actor);
-    let box = wD._thumbnailsBox = new ThumbnailsBox();
-    controls.add_actor(box.actor);
+    thumbnailsBox = wD._thumbnailsBox = new ThumbnailsBox();
+    controls.add_actor(thumbnailsBox.actor);
     wD._alwaysZoomOut = false;
+
+    refreshThumbnailsBox(); // TODO: in a mainloop idle_add?
 }
 
 function unoverrideWorkspaceDisplay() {
@@ -1044,20 +1062,18 @@ function unoverrideWorkspaceDisplay() {
     wD._controls.connect('scroll-event', Lang.bind(wD, wD._onScrollEvent));
 
     // replace the ThumbnailsBox with the original one
-    wD._controls.remove_actor(wD._thumbnailsBox.actor);
-    wD._thumbnailsBox.destroy();
+    wD._controls.remove_actor(thumbnailsBox.actor);
+    thumbnailsBox.destroy();
     let box = wD._thumbnailsBox = new WorkspaceThumbnail.ThumbnailsBox();
     wD._controls.add_actor(box.actor);
     wD._updateAlwaysZoom(); // undo our zoom changes.
+    thumbnailsBox = null;
 }
 
 /******************
  * tells Meta about the number of workspaces we want
  ******************/
 function modifyNumWorkspaces() {
-    /// Storage
-    nWorkspaces = Meta.prefs_get_num_workspaces();
-
     /// Setting the number of workspaces.
     Meta.prefs_set_num_workspaces(
         global.screen.workspace_grid.rows * global.screen.workspace_grid.columns
@@ -1180,23 +1196,25 @@ function unexportFunctionsAndConstants() {
 /***************************
  *         EXTENSION       *
  ***************************/
-let onetime, settings;
 
 function init() {
     Convenience.initTranslations();
 }
 
 function enable() {
-    settings = Convencience.getSettings();
+    /// Storage
+    nWorkspaces = Meta.prefs_get_num_workspaces();
+
+    settings = Convenience.getSettings();
     makeWorkspacesStatic();
     exportFunctionsAndConstants(); // so other extension authors can use.
     modifyNumWorkspaces();
     overrideKeybindingsAndPopup();
+    /*
     // TODO: n-workspaces (prefs.js)
     if (global.screen.workspace_grid && (global.screen.n_workspaces !==
                 global.screen.workspace_grid.rows * global.screen.workspace_grid.columns)) {
         onetime = global.screen.connect('notify::n-workspaces', function () {
-            log('notify::n-workspaces. n_workspaces: %d. rows: %d. columns: %d'.format(global.screen.n_workspaces, global.screen.workspace_grid.rows, global.screen.workspace_grid.columns));
             if (global.screen.workspace_grid && (global.screen.n_workspaces !==
                 global.screen.workspace_grid.rows * global.screen.workspace_grid.columns)) {
                 global.screen.disconnect(onetime);
@@ -1207,13 +1225,58 @@ function enable() {
     } else {
         overrideWorkspaceDisplay();
     }
+    */
+    overrideWorkspaceDisplay();
 
     // Connect settings change: the only one we have to monitor is cols/rows
-    settings.connect('changed::' + KEY_ROWS, function () {
-        // wait for onetime?
+    settings.connect('changed::' + KEY_ROWS, nWorkspacesChanged);
+    settings.connect('changed::' + KEY_COLS, nWorkspacesChanged);
+    settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox);
+    settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox);
+
+    global.screen.connect('notify::n-workspaces', function () {
+        log('notify::n-workspaces. n_workspaces: %d. rows: %d. columns: %d'.format(global.screen.n_workspaces, global.screen.workspace_grid.rows, global.screen.workspace_grid.columns));
     });
-    settings.connect('changed::' + KEY_COLS, function () {
-    });
+}
+
+function nWorkspacesChanged() {
+    // re-export
+    exportFunctionsAndConstants();
+    // re-do the number of workspaces
+    modifyNumWorkspaces();
+
+    // update workspacesDisplay by getting notify::n-workspaces to fire
+    if (Meta.prefs_get_dynamic_workspaces()) {
+        /* NOTE: in GNOME 3.4, Meta.prefs_set_num_workspaces has *no effect*
+         * if Meta.prefs_get_dynamic_workspaces is true.
+         * (see mutter/src/core/screen.c prefs_changed_callback).
+         * TO increase/decrease the number of workspaces (to fire
+         * notify::n-workspaces), we must use global.screen.append_new_workspace
+         * etc.
+         * We could just set dynamic workspaces to false but then we can't drag
+         * and drop windows between workspaces (supposedly a GNOME 3.4 bug,
+         * see the Frippery Static Workspaces extension. Can confirm but cannot
+         * find a relevant bug report.)
+         */
+        let newtotal = (global.screen.workspace_grid.rows *
+            global.screen.workspace_grid.columns);
+        if (global.screen.n_workspaces < newtotal) {
+            for (let i = global.screen.n_workspaces; i < newtotal; ++i) {
+                global.screen.append_new_workspace(false,
+                        global.get_current_time());
+            }
+        } else if (global.screen.n_workspaces > newtotal) {
+            for (let i = global.screen.n_workspaces - 1; i >= newtotal; --i) {
+                global.screen.remove_workspace(
+                        global.screen.get_workspace_by_index(i),
+                        global.get_current_time()
+                );
+            }
+        }
+    } else {
+        // no need to bother: notify::n-workspaces will be fired which
+        // automagically updates thumbnailsDisplay/overview.
+    }
 }
 
 function disable() {
@@ -1222,4 +1285,5 @@ function disable() {
     unmodifyNumWorkspaces();
     unexportFunctionsAndConstants();
     unmakeWorkspacesStatic();
+    settings.disconnect_all();
 }

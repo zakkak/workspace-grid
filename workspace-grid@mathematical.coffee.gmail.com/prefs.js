@@ -43,7 +43,7 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this._settings = Convenience.getSettings();
 
         let item = new Gtk.Label({
-            text: _("NOTE: maximum number of workspaces is 36.")
+            label: _("NOTE: maximum number of workspaces is 36.")
         });
         item.set_line_wrap(true);
         this.addItem(item, 0, 2, 1);
@@ -59,7 +59,7 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
             KEY_WRAPAROUND);
 
         item = new Gtk.Label({
-            text: _("The following settings determine how much horizontal " +
+            label: _("The following settings determine how much horizontal " +
                     "space the workspaces box\n in the overview can take up, " +
                     "as a fraction of the screen width.")
         });
@@ -79,7 +79,11 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
     },
 
     addRow: function (text, widget, wrap) {
-        let label = new Gtk.Label({ label: text });
+        let label = new Gtk.Label({
+            label: text,
+            hexpand: true,
+            halign: Gtk.Align.START
+        });
         label.set_line_wrap(wrap || false);
         this.attach(label, 0, this._rownum, 1, 1); // col, row, colspan, rowspan
         this.attach(widget, 1, this._rownum, 1, 1);
@@ -116,7 +120,7 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
                 }
             }));
         }
-        return this.addRow(text, spinButton, true);
+        return this.addRow(text, spinButton);
     },
 
     addScale: function (text, key, is_int, lower, upper, increment) {
