@@ -105,26 +105,6 @@
  *
  */
 
-//// CONFIGURE HERE (note: you can have at most 36 workspaces)
-const WORKSPACE_CONFIGURATION = {
-    rows: 2,
-    columns: 3
-};
-
-// when navigating workspaces do you want to wrap around from the start to the
-// end?
-const WRAPAROUND = true;
-
-// In the overview the workspace thumbnail sidebar can get pretty wide if you
-// have multiple columns of workspaces.
-// The thumbnail sidebar is constrained to be *at most* this wide (fraction of
-// the screen width)
-const MAX_SCREEN_HFRACTION = 0.8;
-// When the thumbnail sidebar becomes wider than this, it will be collapsed by
-// default (so you can hover your mouse over it to expand it).
-// Must be <= MAX_SCREEN_HFRACTION.
-const MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE = 0.3;
-
 ////////// CODE ///////////
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
@@ -142,9 +122,13 @@ const WorkspacesView = imports.ui.workspacesView;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
-/** to import files from extension
-const MyFile = Me.imports.myFile;
-*/
+const Prefs = Me.imports.prefs;
+
+const KEY_ROWS = Prefs.KEY_ROWS;
+const KEY_COLS = Prefs.KEY_COLS;
+const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
+const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
+const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
 
 const UP = 'switch-to-workspace-up';
 const DOWN = 'switch-to-workspace-down';
@@ -412,7 +396,7 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    moveWorkspace(binding.get_name(), WRAPAROUND);
+    moveWorkspace(binding.get_name(), settings.get_bool(KEY_WRAPAROUND));
 }
 
 /******************
@@ -448,16 +432,16 @@ function overrideKeybindingsAndPopup() {
 
         switch (action) {
         case Meta.KeyBindingAction.WORKSPACE_LEFT:
-            moveWorkspace(LEFT, WRAPAROUND);
+            moveWorkspace(LEFT, settings.get_bool(KEY_WRAPAROUND));
             return true;
         case Meta.KeyBindingAction.WORKSPACE_RIGHT:
-            moveWorkspace(RIGHT, WRAPAROUND);
+            moveWorkspace(RIGHT, settings.get_bool(KEY_WRAPAROUND));
             return true;
         case Meta.KeyBindingAction.WORKSPACE_UP:
-            moveWorkspace(UP, WRAPAROUND);
+            moveWorkspace(UP, settings.get_bool(KEY_WRAPAROUND));
             return true;
         case Meta.KeyBindingAction.WORKSPACE_DOWN:
-            moveWorkspace(DOWN, WRAPAROUND);
+            moveWorkspace(DOWN, settings.get_bool(KEY_WRAPAROUND));
             return true;
         }
         return globalKeyPressHandler(actor, event);
@@ -790,7 +774,7 @@ const ThumbnailsBox = new Lang.Class({
 
         let width = totalSpacingX + nCols * this._porthole.width * scale,
             maxWidth = (Main.layoutManager.primaryMonitor.width *
-                            MAX_SCREEN_HFRACTION) -
+                            settings.get_double(KEY_MAX_HFRACTION)) -
                        this.actor.get_theme_node().get_horizontal_padding() -
                        themeNode.get_horizontal_padding();
 
@@ -801,7 +785,7 @@ const ThumbnailsBox = new Lang.Class({
         //  collapse the workspace thumbnails by default.
         Main.overview._workspacesDisplay._alwaysZoomOut = (width <=
                 (Main.layoutManager.primaryMonitor.width *
-                 MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE));
+                 settings.get_double(KEY_MAX_HFRACTION_COLLAPSE)));
 
         // natural width is nCols of workspaces + (nCols-1)*spacingX
         [alloc.min_size, alloc.natural_size] =
@@ -1029,16 +1013,16 @@ function overrideWorkspaceDisplay() {
     controls.connect('scroll-event', Lang.bind(wD, function (actor, event) {
         switch (event.get_scroll_direction()) {
         case Clutter.ScrollDirection.UP:
-            moveWorkspace(UP, WRAPAROUND);
+            moveWorkspace(UP, settings.get_bool(KEY_WRAPAROUND));
             break;
         case Clutter.ScrollDirection.DOWN:
-            moveWorkspace(DOWN, WRAPAROUND);
+            moveWorkspace(DOWN, settings.get_bool(KEY_WRAPAROUND));
             break;
         case Clutter.ScrollDirection.LEFT:
-            moveWorkspace(LEFT, WRAPAROUND);
+            moveWorkspace(LEFT, settings.get_bool(KEY_WRAPAROUND));
             break;
         case Clutter.ScrollDirection.RIGHT:
-            moveWorkspace(RIGHT, WRAPAROUND);
+            moveWorkspace(RIGHT, settings.get_bool(KEY_WRAPAROUND));
             break;
         }
     }));
@@ -1089,7 +1073,7 @@ function modifyNumWorkspaces() {
 }
 
 function unmodifyNumWorkspaces() {
-    // restore original number of workspaces (though it doesn't really matter)
+    // restore original number of workspaces (though it doesn't really matter?)
     Meta.prefs_set_num_workspaces(nWorkspaces);
 
     global.screen.override_workspace_layout(
@@ -1167,8 +1151,8 @@ function exportFunctionsAndConstants() {
             DOWN: DOWN
         },
 
-        rows: WORKSPACE_CONFIGURATION.rows,
-        columns: WORKSPACE_CONFIGURATION.columns,
+        rows: settings.get_int(KEY_ROWS),
+        columns: settings.get_int(KEY_COLS),
 
         rowColToIndex: rowColToIndex,
         indexToRowCol: indexToRowCol,
@@ -1176,7 +1160,7 @@ function exportFunctionsAndConstants() {
     };
 
     // It seems you can only have 36 workspaces max.
-    if (WORKSPACE_CONFIGURATION.rows * WORKSPACE_CONFIGURATION.columns >
+    if (settings.get_int(KEY_ROWS) * settings.get_int(KEY_COLS) >
             MAX_WORKSPACES) {
         log("WARNING [workspace-grid]: You can have at most 36 workspaces, " +
                 "will ignore the rest");
@@ -1196,11 +1180,14 @@ function unexportFunctionsAndConstants() {
 /***************************
  *         EXTENSION       *
  ***************************/
+let onetime, settings;
+
 function init() {
+    Convenience.initTranslations();
 }
 
-let onetime;
 function enable() {
+    settings = Convencience.getSettings();
     makeWorkspacesStatic();
     exportFunctionsAndConstants(); // so other extension authors can use.
     modifyNumWorkspaces();
@@ -1220,6 +1207,13 @@ function enable() {
     } else {
         overrideWorkspaceDisplay();
     }
+
+    // Connect settings change: the only one we have to monitor is cols/rows
+    settings.connect('changed::' + KEY_ROWS, function () {
+        // wait for onetime?
+    });
+    settings.connect('changed::' + KEY_COLS, function () {
+    });
 }
 
 function disable() {

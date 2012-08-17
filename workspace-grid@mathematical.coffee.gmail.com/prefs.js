@@ -1,3 +1,4 @@
+/*global global, log */ // <-- jshint
 /** Credit:
  *  taken from the gnome shell extensions repository at
  *  git.gnome.org/browse/gnome-shell-extensions
@@ -16,6 +17,12 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
+const KEY_ROWS = 'num-rows';
+const KEY_COLS = 'num-columns';
+const KEY_WRAPAROUND = 'wraparound';
+const KEY_MAX_HFRACTION = 'max-screen-fraction';
+const KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
+
 function init() {
     Convenience.initTranslations();
 }
@@ -23,215 +30,46 @@ function init() {
 function LOG(msg) {
     //log(msg);
 }
-/*
- * A Gtk.ListStore with the convenience of binding one of the columns to
- * a GSettings strv column.
- *
- * Modified from git.gnome.org/gnome-shell-extensions auto-move-windows prefs.js
- *
- * You must modifier to your own use. See '@@' for places to start editing.
- *
- * In particular, 'key' is the strv gsettings key, and 'keyColumnIndex' is the
- * column index we will get the values for this key from.
- *
- * When you add to/delete from the store (via .set), call store.lock().
- * If this returns true then the store has been successfully locked (against
- * further changes occuring whilst you make your changes).
- * If it returns 'false' the store was previously locked and you should not
- * make your changes.
- * When you're done, call store.unlock() to open it up again.
- */
-const ListModel = new GObject.Class({
-    Name: 'WorkspaceGrid.@CamelCaseExtensionName@ListModel',
-    GTypeName: 'WorkspaceGridListModel',
-    Extends: Gtk.ListStore,
-
-    Columns: {
-        COLNAME : [index] // @@ add your columns here
-    },
-
-    _init: function (settings, key, keyColumnIndex, params) {
-        this.parent(params);
-        this._settings = settings;
-        this._strvKey = key;
-        this.set_column_types( /* @@ add types here */ );
-        this._keyColumnIndex = keyColumnIndex;
-        this._preventChanges = false; // a lock.
-
-        this._reloadFromSettings();
-
-        this.connect('row-changed', Lang.bind(this, this._onRowChanged));
-        this.connect('row-inserted', Lang.bind(this, this._onRowInserted));
-        this.connect('row-deleted', Lang.bind(this, this._onRowDeleted));
-
-    },
-
-    /* attempt to lock the store, returning TRUE if we succeeded and FALSE
-     * if it was already locked
-     */
-    lock: function () {
-        if (this._preventChanges) {
-            return false;
-        }
-        this._preventChanges = true;
-        return true;
-    },
-
-    /* unlock the store to allow future changes */
-    unlock: function () {
-        this._preventChanges = false;
-    },
-
-    /* query whether the store is locked */
-    is_locked: function () {
-        return this._preventChanges;
-    },
-
-    _reloadFromSettings: function () {
-        if (this.lock()) {
-            let newNames = this._settings.get_strv(this._strvKey);
-            let [ok, iter] = this.get_iter_first();
-            while (ok) {
-                ok = this.remove(iter);
-            }
-
-            for (let i = 0; i < newNames.length; i++) {
-                iter = this.append();
-                // @@ set other properties here if you like
-                this.set(iter, [this._keyColumnIndex], [newNames[i]]);
-            }
-            this.unlock();
-        }
-    },
-
-    _onRowChanged: function (self, path, iter) {
-        if (this.lock()) {
-            LOG('changing row');
-            let index = path.get_indices()[0],
-                names = this._settings.get_strv(this._strvKey);
-            // @@if you want to fill in gaps with blanks:
-            if (index >= names.length) {
-                // fill with blanks
-                for (let i = names.length; i <= index; i++) {
-                    names[i] = '';
-                }
-            }
-            // otherwise (skip blanks, append to end):
-            // index = Math.min(index, names.length);
-            names[index] = this.get_value(iter, this._keyColumnIndex);
-
-            this._settings.set_strv(this._strvKey, names);
-            this.unlock();
-        } else {
-            LOG('tried to change row but it was locked');
-        }
-    },
-
-    _onRowInserted: function(self, path, iter) {
-        if (this.lock()) {
-            LOG('inserting row');
-            let index = path.get_indices()[0];
-            let names = this._settings.get_strv(this._strvKey);
-            let label = this.get_value(iter, this._keyColumnIndex) || '';
-            names.splice(index, 0, label);
-
-            this._settings.set_strv(this._strvKey, names);
-            this.unlock();
-        } else {
-            LOG('tried to insert row but it was locked');
-        }
-    },
-
-    _onRowDeleted: function(self, path) {
-        if (this.lock()) {
-            LOG('deleting row');
-            let index = path.get_indices()[0];
-            let names = this._settings.get_strv(this._strvKey);
-
-            if (index >= names.length) {
-                return;
-            }
-
-            names.splice(index, 1);
-
-            // compact the array
-            for (let i = names.length -1; i >= 0 && !names[i]; i++) {
-                names.pop();
-            }
-
-            this._settings.set_strv(this._strvKey, names);
-
-            this.unlock();
-        } else {
-            LOG('tried to delete row but it was locked');
-        }
-    }
-});
 
 const WorkspaceGridPrefsWidget = new GObject.Class({
     Name: 'WorkspaceGrid.Prefs.Widget',
     GTypeName: 'WorkspaceGridPrefsWidget',
     Extends: Gtk.Grid,
 
-    _init: function(params) {
+    _init: function (params) {
         this.parent(params);
         this.margin = this.row_spacing = this.column_spacing = 10;
         this._rownum = 0;
         this._settings = Convenience.getSettings();
 
-        let entry = new Gtk.Entry({ hexpand: true });
-        this._settings.bind('hello-text', entry, 'text', Gio.SettingsBindFlags.DEFAULT);
-        this.addRow(_("Message:"), entry);
-
-        this.addBoolean('My boolean setting', BOOLEAN_SETTING_KEY);
-
-        /* Treeview example, an icon + text with the strv key being STRV_KEY */
-        this._store = new ListModel(this._settings, STRV_KEY, ListModel.prototype.Columns.STRV_COLUMN);
-        this._treeView = new Gtk.TreeView({
-            model: this._store,
-            hexpand: true,
-            vexpand: true,
-            headers_visible: true,
-            reorderable: true
+        let item = new Gtk.Label({
+            text: _("NOTE: maximum number of workspaces is 36.")
         });
-        this._treeView.get_selection().set_mode(Gtk.SelectionMode.SINGLE);
+        item.set_line_wrap(true);
+        this.addItem(item, 0, 2, 1);
 
-        // add one column to the tree view being the icon + the text.
-        let col = new Gtk.TreeViewColumn({
-            title: _("My Column Title"),
-            sort_column_id: this._store.Columns.NAME
+
+        this.addSpin(_("Number of rows of workspaces:"), KEY_ROWS, true,
+            1, 36, 1);
+
+        this.addSpin(_("Number of columns of workspaces:"), KEY_COLS, true,
+            1, 36, 1);
+    
+        this.addBoolean(_("Wraparound workspaces when navigating?"),
+            KEY_WRAPAROUND);
+
+        item = new Gtk.Label({
+            text: _("The following settings determine how much horizontal " +
+                    "space the workspaces box\n in the overview can take up, " +
+                    "as a fraction of the screen width.")
         });
-        // To show anything you have to instantiate a renderer, bind it
-        //  to one of the columns in the store, and then add to the column.
-        let iconRenderer = new Gtk.CellRendererPixbuf(),
-            textRenderer = new Gtk.CellRendererText({ editable: false });
-        col.pack_start(iconRenderer, false); // add to column
-        col.pack_start(textRenderer, true);
-        // bind to store
-        col.add_attribute(iconRenderer, 'gicon', this._store.Columns.ICON);
-        col.add_attribute(textRenderer, 'text', this._store.Columns.NAME);
+        item.set_line_wrap(true);
+        this.addItem(item, 0, 2, 1);
 
-        // add column to tree view
-        this._treeView.append_column(col);
-
-        // add tree view to widget
-        this.addItem(this._treeView);
-
-        /* Now add a toolbar with 'add' and 'delete' for the treeview */
-        let toolbar = new Gtk.Toolbar();
-        toolbar.get_style_context().add_class(Gtk.STYLE_CLASS_INLINE_TOOLBAR);
-
-        let newButton = new Gtk.ToolButton({ stock_id: Gtk.STOCK_NEW });
-        newButton.connect('clicked', Lang.bind(this, this._newClicked));
-        toolbar.add(newButton);
-
-        let delButton = new Gtk.ToolButton({ stock_id: Gtk.STOCK_DELETE });
-        delButton.connect('clicked', Lang.bind(this, this._delClicked));
-        toolbar.add(delButton);
-
-        this.addItem(toolbar);
-
-
+        this.addScale(_("Maximum width (fraction):"), KEY_MAX_HFRACTION, false,
+                0, 1, 0.05);
+        this.addScale(_("Maximum width (fraction) before collapse:"),
+                KEY_MAX_HFRACTION_COLLAPSE, false, 0, 1, 0.05);
     },
 
     addBoolean: function (text, key) {
@@ -248,24 +86,67 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this._rownum++;
     },
 
+    addSpin: function (text, key, is_int, lower, upper, increment) {
+        /* Length cutoff item */
+        let adjustment = new Gtk.Adjustment({
+            lower: lower,
+            upper: upper,
+            step_increment: increment || 1
+        });
+        let spinButton = new Gtk.SpinButton({
+            adjustment: adjustment,
+            digits: (is_int ? 0 : 2),
+            snap_to_ticks: true,
+            numeric: true,
+        });
+        if (is_int) {
+            spinButton.set_value(this._settings.get_int(key));
+            spinButton.connect('value-changed', Lang.bind(this, function (spin) {
+                let value = spinButton.get_value_as_int();
+                if (this._settings.get_int(key) !== value) {
+                    this._settings.set_int(key, value);
+                }
+            }));
+        } else {
+            spinButton.set_value(this._settings.get_double(key));
+            spinButton.connect('value-changed', Lang.bind(this, function (spin) {
+                let value = spinButton.get_value();
+                if (this._settings.get_double(key) !== value) {
+                    this._settings.set_double(key, value);
+                }
+            }));
+        }
+        return this.addRow(text, spinButton, true);
+    },
+
+    addScale: function (text, key, is_int, lower, upper, increment) {
+        let hscale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,
+                lower, upper, increment);
+        hscale.set_digits(is_int ? 0 : 2);
+        hscale.set_hexpand(true);
+        if (is_int) {
+            hscale.set_value(this._settings.get_int(key));
+            hscale.connect('value-changed', Lang.bind(this, function () {
+                let value = hscale.get_value();
+                if (this._settings.get_int(key) !== value) {
+                    this._settings.set_int(key, value);
+                }
+            }));
+        } else {
+            hscale.set_value(this._settings.get_double(key));
+            hscale.connect('value-changed', Lang.bind(this, function () {
+                let value = hscale.get_value();
+                if (this._settings.get_double(key) !== value) {
+                    this._settings.set_double(key, value);
+                }
+            }));
+        }
+        return this.addRow(text, hscale, true);
+    },
+
     addItem: function (widget, col, colspan, rowspan) {
         this.attach(widget, col || 0, this._rownum, colspan || 2, rowspan || 1);
         this._rownum++;
-    },
-
-    /* add/delete from treeView */
-    _newClicked: function() {
-        let iter = this._store.append();
-        // POPULATE THIS:
-        this._store.set(iter, [this._store.Columns.NAMES], [values]);
-    },
-
-    _delClicked: function() {
-        let [any, model, iter] = this._treeView.get_selection().get_selected();
-
-        if (any) {
-            this._store.remove(iter);
-        }
     }
 });
 
