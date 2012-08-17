@@ -76,22 +76,14 @@
  * - org.gnome.desktop.wm.preferences.num-workspaces <numworkspaces>
  * However then you can't drag/drop applications between workspaces (GNOME 3.4.1
  * anyway)
- *
- * **BIG TODO:** however, in GNOME 3.4 when we do Meta.prefs_set_num_workspaces,
- * if dynamic-workspaces is TRUE, global.screen.n_workspaces does NOT get updated
- * and notify::n-workspaces does NOT get sent --> have to use global.screen.append_new_wokrpsace
- * With dynamic-workspaces to FALSE, everything works fine.
+ * 
+ * Hence we make use of the Frippery Static Workspace code.
  *
  * See also the edited workspaces indicator
  * http://kubiznak-petr.ic.cz/en/workspace-indicator.php (this is column-major).
  *
  * TODO
  * ----
- * * sometimes on restart in the overview hovering won't make the tab expand.
- * * restarting with a larger number of workspaces causes 'children[i] is
- *   undefined'. (GNOME 3.4: prefs_set_num_worspaces does not work: investigate
- *   registry?)
- * * test with the remove workspaces display extension.
  * - workspace indicator (which you can toggle on/off) [perhaps separate ext.]
  *   - r-click to rename workspace (meta.prefs_change_workspace_name)
  *   - r-click to adjust rows/cols
@@ -107,7 +99,8 @@
  *    display, screen, window, binding
  * - keybinding callback: binding -> binding.get_name()
  * - destroy_children <-> destroy_all_children
- *
+ * - In 3.4 thumbnails box has a dropPlaceholder for dropping windows into new
+ *   workspaces
  */
 
 ////////// CODE ///////////
@@ -602,60 +595,72 @@ const ThumbnailsBox = new Lang.Class({
 
         this._dropWorkspace = -1;
         if (this._dropPlaceholderPos === 0) {
-            targetBaseX = this._dropPlaceholder.x;
             targetBaseY = this._dropPlaceholder.y;
         } else {
-            targetBaseX = this._thumbnails[0].actor.x;
             targetBaseY = this._thumbnails[0].actor.y;
-            log('startX: %d, startY: %d'.format(targetBaseX, targetBaseY));
         }
-        // UPTO: FIXME: you have to iterate row/col and increment X/Y like that.
-        let targetLeft = targetBaseX - spacing - WORKSPACE_CUT_SIZE,
-            targetTop = targetBaseY - spacing - WORKSPACE_CUT_SIZE;
+        let targetTop = targetBaseY - spacing - WORKSPACE_CUT_SIZE;
+        let targetBottom, nextTargetBaseY, nextTargetTop, targetLeft;
+
         for (let i = 0; i < this._thumbnails.length; i++) {
-            log('top-left corner workspace %d: %d, %d'.format(i,
-                        this._thumbnails[i].actor.x, this._thumbnails[i].actor.y));
             // Allow the reorder target to have a 10px "cut" into
             // each side of the thumbnail, to make dragging onto the
             // placeholder easier
-            let [row, col] = indexToRowCol(i);
-            let [w, h] = this._thumbnails[i].actor.get_transformed_size();
-            //log('width: %d, height: %d'.format(w, h)); // fine
-            let targetRight = targetBaseX + WORKSPACE_CUT_SIZE;
-            let targetBottom = targetBaseY + WORKSPACE_CUT_SIZE;
-            log('targetTop: %d, targetBottom: %d, targetLeft: %d, targetRight: %d'.format(
-                        targetTop, targetBottom, targetLeft, targetRight));
+            let [row, col] = indexToRowCol(i),
+                [w, h] = this._thumbnails[i].actor.get_transformed_size();
+            if (col === 0) { // new row.
+                // 1) reset X targets to col 0
+                if (this._dropPlaceholderPos === 0) {
+                    targetBaseX = this._dropPlaceholder.x;
+                } else {
+                    targetBaseX = this._thumbnails[0].actor.x;
+                }
+                targetLeft = targetBaseX - spacing - WORKSPACE_CUT_SIZE;
 
-            let nextTargetBaseX = targetBaseX + w + spacing,
-                nextTargetBaseY = targetBaseY + h + spacing,
-                nextTargetLeft =  nextTargetBaseX - spacing -
-                    ((col === global.screen.workspace_grid.cols - 1) ? 0 :
-                         WORKSPACE_CUT_SIZE),
-                nextTargetTop =  nextTargetBaseY - spacing -
+                // 2) increment Y targets
+                if (row > 0) {
+                    targetBaseY = nextTargetBaseY;
+                    targetTop = nextTargetTop; // THESE ARE GOING WRONG
+                }
+                targetBottom = targetBaseY + WORKSPACE_CUT_SIZE;
+                nextTargetBaseY = targetBaseY + h + spacing;
+                nextTargetTop = nextTargetBaseY - spacing -
                     ((row === global.screen.workspace_grid.rows - 1) ? 0 :
                          WORKSPACE_CUT_SIZE);
-            log('nextTargetBaseX: %d, nextTargetBaseY: %d, nextTargetLeft: %d, nextTargetRight: %d'.format(nextTargetBaseX, nextTargetBaseY, nextTargetLeft, nextTargetTop));
+            }
+            let targetRight = targetBaseX + WORKSPACE_CUT_SIZE,
+                nextTargetBaseX = targetBaseX + w + spacing,
+                nextTargetLeft =  nextTargetBaseX - spacing -
+                    ((col === global.screen.workspace_grid.cols - 1) ? 0 :
+                         WORKSPACE_CUT_SIZE);
 
             // Expand the target to include the placeholder, if it exists.
             if (i === this._dropPlaceholderPos) {
-                targetRight += this._dropPlaceholder.get_width();
-                targetBottom += this._dropPlaceholder.get_height();
+                // have to guard against the -1 case...
+                if (this._dropPlaceholderHorizontal === true) {
+                    targetBottom += this._dropPlaceholder.get_height();
+                } else if (this._dropPlaceholderHorizontal === false) {
+                    targetRight += this._dropPlaceholder.get_width();
+                }
             }
 
+            /*
+            log('target area for workspace %d (%d, %d):\n  horizontal (%d, %d) to (%d, %d)\n  vertical (%d, %d) to (%d, %d)'.format(
+                        i, row, col,
+                        targetBaseX, targetTop, targetBaseX + w, targetBottom,
+                        targetLeft, targetBaseY, targetRight, targetBaseY + h
+                        ));
+            */
             if (y > targetTop && y <= targetBottom &&
-                    //x >= targetBaseX && x <= (targetBaseX + w) &&
+                    x >= targetBaseX && x <= (targetBaseX + w) &&
                     source !== Main.xdndHandler) {
-                log('x: %d, y: %d, in target area above WS %d'.format(
-                            x, y, i));
                 // workspace is placed
-                log('placeholder horizontally before workspace ' + i);
                 placeholderPos = i;
                 placeholderOrient = true;
                 break;
             } else if (x > targetLeft && x <= targetRight &&
                     y >= targetBaseY && y <= (targetBaseY + h) &&
                     source !== Main.xdndHandler) {
-                log('placeholder vertically after workspace ' + i);
                 placeholderPos = i;
                 placeholderOrient = false;
                 break;
@@ -666,9 +671,7 @@ const ThumbnailsBox = new Lang.Class({
             }
 
             targetBaseX = nextTargetBaseX;
-            targetBaseY = nextTargetBaseY;
-            targetTop = nextTargetTop; // THESE ARE GOING WRONG
-            targetLeft = nextTargetLeft; // THESE ARE GOING WRONG
+            targetLeft = nextTargetLeft;
         }
 
         if (this._dropPlaceholderPos !== placeholderPos ||
@@ -804,14 +807,6 @@ const ThumbnailsBox = new Lang.Class({
         if (this._thumbnails.length === 0) // not visible
             return;
 
-        if (global.screen.n_workspaces !==
-                global.screen.workspace_grid.columns *
-                global.screen.workspace_grid.rows) {
-            // the user has just restarted the shell with a new number of
-            // workspaces and we have to wait for these two values to come
-            // into sync before allocating.
-        }
-
         let rtl = (Clutter.get_default_text_direction() ===
                 Clutter.TextDirection.RTL),
         // See comment about this._background in _init()
@@ -897,7 +892,8 @@ const ThumbnailsBox = new Lang.Class({
                 // spaced; we don't bother because I'm not smart enough to work
                 // it out (so the spacing on the left might be a few pixels
                 // more than that on the right).
-                let x1 = x;
+                let x1 = x,
+                    y1 = y;
 
                 if (thumbnail.slidePosition !== 0) {
                     if (rtl) {
@@ -907,10 +903,7 @@ const ThumbnailsBox = new Lang.Class({
                     }
                 }
 
-                // TODO UPTO
-                // NOTE: Need ORIENTATION
                 if (i === this._dropPlaceholderPos) {
-                    log('adding placeholder for workspace ' + i);
                     if (this._dropPlaceholderHorizontal) {
                         let [minHeight, placeholderHeight] =
                             this._dropPlaceholder.get_preferred_height(-1);
@@ -919,8 +912,7 @@ const ThumbnailsBox = new Lang.Class({
                         childBox.y1 = y;
                         childBox.y2 = y + placeholderHeight;
 
-                        y += placeholderHeight + spacing;
-                        x += thumbnailWidth + spacing;
+                        y1 += placeholderHeight + spacing;
                     } else {
                         let [minWidth, placeholderWidth] =
                             this._dropPlaceholder.get_preferred_width(-1);
@@ -929,8 +921,8 @@ const ThumbnailsBox = new Lang.Class({
                         childBox.y1 = y;
                         childBox.y2 = y + thumbnailHeight;
 
-                        y += placeholderWidth + spacing;
-                        x += thumbnailHeight + spacing;
+                        x += placeholderWidth + spacing;
+                        x1 += placeholderWidth + spacing;
                     }
                     this._dropPlaceholder.allocate(childBox, flags);
                     Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this,
@@ -940,7 +932,7 @@ const ThumbnailsBox = new Lang.Class({
                 }
 
                 if (thumbnail.metaWorkspace === indicatorWorkspace) {
-                    indicatorY = y;
+                    indicatorY = y1;
                     indicatorX = x1;
                 }
 
@@ -949,8 +941,8 @@ const ThumbnailsBox = new Lang.Class({
                 // size.
                 childBox.x1 = x1;
                 childBox.x2 = x1 + portholeWidth;
-                childBox.y1 = y;
-                childBox.y2 = y + portholeHeight;
+                childBox.y1 = y1;
+                childBox.y2 = y1 + portholeHeight;
 
                 thumbnail.actor.set_scale(roundedHScale, roundedVScale);
                 thumbnail.actor.allocate(childBox, flags);
@@ -989,7 +981,7 @@ const ThumbnailsBox = new Lang.Class({
         while (i--) {
             Main.overview.disconnect(this._signals[i]);
         }
-        this._signals[i] = [];
+        this._signals = [];
     }
 });
 
@@ -1026,48 +1018,51 @@ function overrideWorkspaceDisplay() {
     controls.reactive = true;
     controls.track_hover = true;
     controls.connect('notify::hover', Lang.bind(wD, wD._onControlsHoverChanged));
-    controls.connect('scroll-event', Lang.bind(wD, function (actor, event) {
-        switch (event.get_scroll_direction()) {
-        case Clutter.ScrollDirection.UP:
-            moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
-            break;
-        case Clutter.ScrollDirection.DOWN:
-            moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
-            break;
-        case Clutter.ScrollDirection.LEFT:
-            moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
-            break;
-        case Clutter.ScrollDirection.RIGHT:
-            moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
-            break;
-        }
-    }));
+    onScrollId = controls.connect('scroll-event',
+        Lang.bind(wD, function (actor, event) {
+            switch (event.get_scroll_direction()) {
+            case Clutter.ScrollDirection.UP:
+                moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
+                break;
+            case Clutter.ScrollDirection.DOWN:
+                moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
+                break;
+            case Clutter.ScrollDirection.LEFT:
+                moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
+                break;
+            case Clutter.ScrollDirection.RIGHT:
+                moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
+                break;
+            }
+        }));
 
     // 2. Replace workspacesDisplay._thumbnailsBox with my own.
     // Start with controls collapsed (since the workspace thumbnails can take
     // up quite a bit of space horizontally). This will be recalculated
     // every time the overview shows.
-    controls.remove_actor(wD._thumbnailsBox.actor);
+    wD._thumbnailsBox.actor.unparent();
     thumbnailsBox = wD._thumbnailsBox = new ThumbnailsBox();
     controls.add_actor(thumbnailsBox.actor);
     wD._alwaysZoomOut = false;
 
-    refreshThumbnailsBox(); // TODO: in a mainloop idle_add?
+    refreshThumbnailsBox();
 }
 
 function unoverrideWorkspaceDisplay() {
     let wD = Main.overview._workspacesDisplay;
     // put the original _scrollEvent back again
-    wD._controls.disconnect(onScrollId);
+    if (onScrollId) {
+        wD._controls.disconnect(onScrollId);
+        onScrollId = 0;
+    }
     wD._controls.connect('scroll-event', Lang.bind(wD, wD._onScrollEvent));
 
     // replace the ThumbnailsBox with the original one
-    wD._controls.remove_actor(thumbnailsBox.actor);
     thumbnailsBox.destroy();
+    thumbnailsBox = null;
     let box = wD._thumbnailsBox = new WorkspaceThumbnail.ThumbnailsBox();
     wD._controls.add_actor(box.actor);
     wD._updateAlwaysZoom(); // undo our zoom changes.
-    thumbnailsBox = null;
 }
 
 /******************
@@ -1079,6 +1074,36 @@ function modifyNumWorkspaces() {
         global.screen.workspace_grid.rows * global.screen.workspace_grid.columns
     );
 
+    /* NOTE: in GNOME 3.4, Meta.prefs_set_num_workspaces has *no effect*
+     * if Meta.prefs_get_dynamic_workspaces is true.
+     * (see mutter/src/core/screen.c prefs_changed_callback).
+     * To *actually* increase/decrease the number of workspaces (to fire
+     * notify::n-workspaces), we must use global.screen.append_new_workspace and
+     * global.screen.remove_workspace.
+     *    
+     * We could just set org.gnome.shell.overrides.dynamic-workspaces to false
+     * but then we can't drag and drop windows between workspaces (supposedly a
+     * GNOME 3.4 bug, see the Frippery Static Workspaces extension. Can confirm
+     * but cannot find a relevant bug report/fix.)
+     */
+    if (Meta.prefs_get_dynamic_workspaces()) {
+        let newtotal = (global.screen.workspace_grid.rows *
+            global.screen.workspace_grid.columns);
+        if (global.screen.n_workspaces < newtotal) {
+            for (let i = global.screen.n_workspaces; i < newtotal; ++i) {
+                global.screen.append_new_workspace(false,
+                        global.get_current_time());
+            }
+        } else if (global.screen.n_workspaces > newtotal) {
+            for (let i = global.screen.n_workspaces - 1; i >= newtotal; --i) {
+                global.screen.remove_workspace(
+                        global.screen.get_workspace_by_index(i),
+                        global.get_current_time()
+                );
+            }
+        }
+    }
+
     // This appears to do nothing but we'll do it in case it helps.
     global.screen.override_workspace_layout(
         Meta.ScreenCorner.TOPLEFT, // workspace 0
@@ -1086,6 +1111,7 @@ function modifyNumWorkspaces() {
         global.screen.workspace_grid.rows,
         global.screen.workspace_grid.columns
     );
+
 }
 
 function unmodifyNumWorkspaces() {
@@ -1107,7 +1133,6 @@ function dummy() {
     return false;
 }
 
-// FIXME: check in GNOME 3.4 about just using overrides.dynamic-workspaces.
 function makeWorkspacesStatic() {
     /// storage
     staticWorkspaceStorage._nWorkspacesChanged = Main._nWorkspacesChanged;
@@ -1210,22 +1235,6 @@ function enable() {
     exportFunctionsAndConstants(); // so other extension authors can use.
     modifyNumWorkspaces();
     overrideKeybindingsAndPopup();
-    /*
-    // TODO: n-workspaces (prefs.js)
-    if (global.screen.workspace_grid && (global.screen.n_workspaces !==
-                global.screen.workspace_grid.rows * global.screen.workspace_grid.columns)) {
-        onetime = global.screen.connect('notify::n-workspaces', function () {
-            if (global.screen.workspace_grid && (global.screen.n_workspaces !==
-                global.screen.workspace_grid.rows * global.screen.workspace_grid.columns)) {
-                global.screen.disconnect(onetime);
-                onetime = 0;
-                overrideWorkspaceDisplay();
-            }
-        });
-    } else {
-        overrideWorkspaceDisplay();
-    }
-    */
     overrideWorkspaceDisplay();
 
     // Connect settings change: the only one we have to monitor is cols/rows
@@ -1234,49 +1243,16 @@ function enable() {
     settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox);
     settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox);
 
-    global.screen.connect('notify::n-workspaces', function () {
-        log('notify::n-workspaces. n_workspaces: %d. rows: %d. columns: %d'.format(global.screen.n_workspaces, global.screen.workspace_grid.rows, global.screen.workspace_grid.columns));
-    });
+    // this forces the workspaces display to update itself to match the new
+    // number of workspaces.
+    global.screen.notify('n-workspaces');
 }
 
 function nWorkspacesChanged() {
-    // re-export
+    // re-export new rows/cols
     exportFunctionsAndConstants();
-    // re-do the number of workspaces
+    // reset the number of workspaces
     modifyNumWorkspaces();
-
-    // update workspacesDisplay by getting notify::n-workspaces to fire
-    if (Meta.prefs_get_dynamic_workspaces()) {
-        /* NOTE: in GNOME 3.4, Meta.prefs_set_num_workspaces has *no effect*
-         * if Meta.prefs_get_dynamic_workspaces is true.
-         * (see mutter/src/core/screen.c prefs_changed_callback).
-         * TO increase/decrease the number of workspaces (to fire
-         * notify::n-workspaces), we must use global.screen.append_new_workspace
-         * etc.
-         * We could just set dynamic workspaces to false but then we can't drag
-         * and drop windows between workspaces (supposedly a GNOME 3.4 bug,
-         * see the Frippery Static Workspaces extension. Can confirm but cannot
-         * find a relevant bug report.)
-         */
-        let newtotal = (global.screen.workspace_grid.rows *
-            global.screen.workspace_grid.columns);
-        if (global.screen.n_workspaces < newtotal) {
-            for (let i = global.screen.n_workspaces; i < newtotal; ++i) {
-                global.screen.append_new_workspace(false,
-                        global.get_current_time());
-            }
-        } else if (global.screen.n_workspaces > newtotal) {
-            for (let i = global.screen.n_workspaces - 1; i >= newtotal; --i) {
-                global.screen.remove_workspace(
-                        global.screen.get_workspace_by_index(i),
-                        global.get_current_time()
-                );
-            }
-        }
-    } else {
-        // no need to bother: notify::n-workspaces will be fired which
-        // automagically updates thumbnailsDisplay/overview.
-    }
 }
 
 function disable() {
@@ -1285,5 +1261,10 @@ function disable() {
     unmodifyNumWorkspaces();
     unexportFunctionsAndConstants();
     unmakeWorkspacesStatic();
+
     settings.disconnect_all();
+
+    // just in case, let everything else get used to the new number of
+    // workspaces.
+    global.screen.notify('n-workspaces');
 }
