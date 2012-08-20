@@ -2,11 +2,11 @@
  "extension-id": "workspace-grid",
  "name": "Workspace Grid",
  "uuid": "workspace-grid@mathematical.coffee.gmail.com",
+ "settings-schema": "org.gnome.shell.extensions.workspace-grid",
  "gettext-domain": "workspace-grid",
- "description": "Arranges workspaces in a configurable grid",
+ "description": "Arranges workspaces in a configurable grid.\nAlso:\n* implements keybindings for left/right workspace navigation (up/down are already implemented)\n* updates workspaces sidebar with grid configuration (use Remove Workspaces Sidebar if you don't want it)",
  "shell-version": [ 
-     "3.2" ,
-     "3.4"
+     "3.2"
  ],
  "url": "https://bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension",
  "dev-version": "0.1",
