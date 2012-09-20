@@ -29,7 +29,9 @@ If you want a textual workspace indicator in your panel, use the [Workspace Indi
 
 If you want to use arrow keys to navigate between workspaces in the overview, use the [Workspace navigator extension](https://extensions.gnome.org/extension/29/workspace-navigator/).
 
-If you want a graphical workspace indicator in your panel (_a la_ GNOME-panel's Workspace Switcher Applet), I am working on a [Graphical Workspace Indicator extension](https://bitbucket.org/mathematicalcoffee/graphical-workspace-indicator-gnome-shell-extension) compatible with this one.
+If you want a graphical workspace indicator in your panel (_a la_ GNOME-panel's Workspace Switcher Applet with the window icon snapshots and all), I am working on a [Graphical Workspace Indicator extension](https://bitbucket.org/mathematicalcoffee/graphical-workspace-indicator-gnome-shell-extension) compatible with this one (still in progress...). There's a simpler version of a the GNOME 2.x workspace switcher currently (20/Sep) in review on e.g.o: [WorkspaceBar](https://extensions.gnome.org/review/1856) (It displays workspace numbers and all in one row. Very handy.).
+
+Let me know of similar extensions to add to this list.
 
 ---
 
@@ -116,7 +118,7 @@ extension. Then you have to wait for this extension to load and populate
 `global.screen.workspace_grid`.
 
 When the Workspace Grid extension enables or disables it fires a
- 'notify::n_workspaces' signal on global.screen.
+ `'notify::n_workspaces'` signal on global.screen.
 You can connect to this and check for the existence (or removal) of
 `global.screen.workspace_grid`.
 
