@@ -114,6 +114,7 @@ const St = imports.gi.St;
 
 const Main = imports.ui.main;
 const Tweener = imports.ui.tweener;
+const WindowManager = imports.ui.windowManager;
 const WorkspaceSwitcher = imports.ui.workspaceSwitcherPopup;
 const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
 const WorkspacesView = imports.ui.workspacesView;
@@ -134,9 +135,11 @@ const MAX_WORKSPACES = 36;
 const MAX_THUMBNAIL_SCALE = WorkspaceThumbnail.MAX_THUMBNAIL_SCALE;
 const WORKSPACE_CUT_SIZE = WorkspaceThumbnail.WORKSPACE_CUT_SIZE;
 const ThumbnailsBoxProto = WorkspaceThumbnail.ThumbnailsBox.prototype;
+const WMProto = WindowManager.WindowManager.prototype;
 
 /* storage for the extension */
 let staticWorkspaceStorage = {};
+let wmStorage = {};
 let nWorkspaces;
 let workspaceSwitcherPopup = null;
 let globalKeyPressHandler = null;
@@ -440,6 +443,25 @@ function overrideKeybindingsAndPopup() {
         }
         return globalKeyPressHandler(actor, event);
     };
+
+    // Override imports.ui.windowManager.actionMoveWorkspace* just in case other
+    // extensions use them.
+    wmStorage.actionMoveWorkspaceUp = WMProto.actionMoveWorkspaceUp;
+    WindowManager.prototype.actionMoveWorkspaceUp = function () {
+        moveWorkspace(UP, WRAPAROUND);
+    };
+    wmStorage.actionMoveWorkspaceDown = WMProto.actionMoveWorkspaceDown;
+    WindowManager.prototype.actionMoveWorkspaceDown = function () {
+        moveWorkspace(DOWN, WRAPAROUND);
+    };
+    wmStorage.actionMoveWorkspaceLeft = WMProto.actionMoveWorkspaceLeft;
+    WindowManager.prototype.actionMoveWorkspaceLeft = function () {
+        moveWorkspace(LEFT, WRAPAROUND);
+    };
+    wmStorage.actionMoveWorkspaceRight = WMProto.actionMoveWorkspaceRight;
+    WindowManager.prototype.actionMoveWorkspaceRight = function () {
+        moveWorkspace(RIGHT, WRAPAROUND);
+    };
 }
 
 /* Restore the original keybindings */
@@ -457,6 +479,11 @@ function unoverrideKeybindingsAndPopup() {
     Main._globalKeyPressHandler = globalKeyPressHandler;
 
     workspaceSwitcherPopup = null;
+
+    WMProto.actionMoveWorkspaceUp = wmStorage.actionMoveWorkspaceUp;
+    WMProto.actionMoveWorkspaceDown = wmStorage.actionMoveWorkspaceDown;
+    WMProto.actionMoveWorkspaceLeft = wmStorage.actionMoveWorkspaceLeft;
+    WMProto.actionMoveWorkspaceRight = wmStorage.actionMoveWorkspaceRight;
 }
 
 /******************
