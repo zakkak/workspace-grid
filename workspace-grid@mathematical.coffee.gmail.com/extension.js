@@ -44,20 +44,11 @@
  * extension. Then you have to wait for this extension to load and populate
  * global.screen.workspace_grid.
  *
- * For the moment you will just have to delay your extension's 'enable' function
- * until this one has loaded first. Adding in a Mainloop.idle_add should do the
- * trick.
+ * When the workspace_grid extension enables or disables it fires a
+ *  'notify::n_workspaces' signal on global.screen.
  *
- * What I'd *like* to do is provide a signal `workspace-grid-enabled` on
- * global.screen when this extension is done populating
- * global.screen.workspace_grid, and your extension can connect to that, e.g.:
- *
- *     global.screen.connect('workspace-grid-enabled', function () {
- *         // now you can use global.screen.workspace_grid.rows etc
- *     });
- *
- * (NOTE: is it preferred that you just listen to 'extension-enabled' on this
- *  extension's UUID?)
+ * You can connect to this and check for the existence (or removal) of
+ * global.screen.workspace_grid.
  *
  * Further notes
  * -------------
@@ -76,20 +67,11 @@
  * - org.gnome.desktop.wm.preferences.num-workspaces <numworkspaces>
  * However then you can't drag/drop applications between workspaces (GNOME 3.4.1
  * anyway)
- * 
+ *
  * Hence we make use of the Frippery Static Workspace code.
  *
  * See also the edited workspaces indicator
  * http://kubiznak-petr.ic.cz/en/workspace-indicator.php (this is column-major).
- *
- * TODO
- * ----
- * - workspace indicator (which you can toggle on/off) [perhaps separate ext.]
- *   - r-click to rename workspace (meta.prefs_change_workspace_name)
- *   - r-click to adjust rows/cols
- *   - see gnome-panel. (Click to drag ....)
- *   - also workspaceThumbnail ThumbnailsBox shows each window in each workspace
- *     preview - we just want a simplified version of that. (addThumbnails)
  *
  * GNOME 3.2 <-> GNOME 3.4
  * -----------------------
@@ -113,6 +95,7 @@ const St = imports.gi.St;
 const DND = imports.ui.dnd;
 const Main = imports.ui.main;
 const Tweener = imports.ui.tweener;
+const WindowManager = imports.ui.windowManager;
 const WorkspaceSwitcher = imports.ui.workspaceSwitcherPopup;
 const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
 const WorkspacesView = imports.ui.workspacesView;
@@ -137,13 +120,15 @@ const RIGHT = 'switch-to-workspace-right';
  */
 const MAX_WORKSPACES = 36;
 
-/* Import some constants from other files */
+/* Import some constants from other files and also some laziness */
 const MAX_THUMBNAIL_SCALE = WorkspaceThumbnail.MAX_THUMBNAIL_SCALE;
 const WORKSPACE_CUT_SIZE = WorkspaceThumbnail.WORKSPACE_CUT_SIZE;
 const ThumbnailState = WorkspaceThumbnail.ThumbnailState;
+const WMProto = WindowManager.WindowManager.prototype;
 
 /* storage for the extension */
 let staticWorkspaceStorage = {};
+let wmStorage = {};
 let nWorkspaces;
 let workspaceSwitcherPopup = null;
 let globalKeyPressHandler = null;
@@ -447,6 +432,25 @@ function overrideKeybindingsAndPopup() {
         }
         return globalKeyPressHandler(actor, event);
     };
+
+    // Override imports.ui.windowManager.actionMoveWorkspace* just in case other
+    // extensions use them.
+    wmStorage.actionMoveWorkspaceUp = WMProto.actionMoveWorkspaceUp;
+    WMProto.actionMoveWorkspaceUp = function () {
+        moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
+    };
+    wmStorage.actionMoveWorkspaceDown = WMProto.actionMoveWorkspaceDown;
+    WMProto.actionMoveWorkspaceDown = function () {
+        moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
+    };
+    wmStorage.actionMoveWorkspaceLeft = WMProto.actionMoveWorkspaceLeft;
+    WMProto.actionMoveWorkspaceLeft = function () {
+        moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
+    };
+    wmStorage.actionMoveWorkspaceRight = WMProto.actionMoveWorkspaceRight;
+    WMProto.actionMoveWorkspaceRight = function () {
+        moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
+    };
 }
 
 /* Restore the original keybindings */
@@ -464,6 +468,11 @@ function unoverrideKeybindingsAndPopup() {
     Main._globalKeyPressHandler = globalKeyPressHandler;
 
     workspaceSwitcherPopup = null;
+
+    WMProto.actionMoveWorkspaceUp = wmStorage.actionMoveWorkspaceUp;
+    WMProto.actionMoveWorkspaceDown = wmStorage.actionMoveWorkspaceDown;
+    WMProto.actionMoveWorkspaceLeft = wmStorage.actionMoveWorkspaceLeft;
+    WMProto.actionMoveWorkspaceRight = wmStorage.actionMoveWorkspaceRight;
 }
 
 /******************
@@ -1115,7 +1124,7 @@ function modifyNumWorkspaces() {
 }
 
 function unmodifyNumWorkspaces() {
-    // restore original number of workspaces (though it doesn't really matter?)
+    // restore original number of workspaces
     Meta.prefs_set_num_workspaces(nWorkspaces);
 
     global.screen.override_workspace_layout(
@@ -1168,8 +1177,6 @@ function unmakeWorkspacesStatic() {
  * global.screen.workspace_grid
  * such that if other extension authors want to they can use them.
  *
- * (TODO: just use imports.misc.extensionUtils.extensions[uuid].XXXX ?)
- *
  * Exported constants:
  * Directions = { UP, LEFT, RIGHT, DOWN } : directions for navigating workspaces
  * rows     : number of rows of workspaces
@@ -1208,13 +1215,9 @@ function exportFunctionsAndConstants() {
         global.screen.workspace_grid.rows = Math.ceil(
                 MAX_WORKSPACES / global.screen.workspace_grid.columns);
     }
-    // TODO: how to set this up?
-    // global.screen.emit('workspace-grid-enabled');
 }
 
 function unexportFunctionsAndConstants() {
-    // TODO: how to set this up?
-    // global.screen.emit('workspace-grid-disabled');
     delete global.screen.workspace_grid;
 }
 
@@ -1223,7 +1226,6 @@ function unexportFunctionsAndConstants() {
  ***************************/
 
 function init() {
-    Convenience.initTranslations();
 }
 
 function enable() {
