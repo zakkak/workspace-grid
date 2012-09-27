@@ -447,19 +447,19 @@ function overrideKeybindingsAndPopup() {
     // Override imports.ui.windowManager.actionMoveWorkspace* just in case other
     // extensions use them.
     wmStorage.actionMoveWorkspaceUp = WMProto.actionMoveWorkspaceUp;
-    WindowManager.prototype.actionMoveWorkspaceUp = function () {
+    WMProto.actionMoveWorkspaceUp = function () {
         moveWorkspace(UP, WRAPAROUND);
     };
     wmStorage.actionMoveWorkspaceDown = WMProto.actionMoveWorkspaceDown;
-    WindowManager.prototype.actionMoveWorkspaceDown = function () {
+    WMProto.actionMoveWorkspaceDown = function () {
         moveWorkspace(DOWN, WRAPAROUND);
     };
     wmStorage.actionMoveWorkspaceLeft = WMProto.actionMoveWorkspaceLeft;
-    WindowManager.prototype.actionMoveWorkspaceLeft = function () {
+    WMProto.actionMoveWorkspaceLeft = function () {
         moveWorkspace(LEFT, WRAPAROUND);
     };
     wmStorage.actionMoveWorkspaceRight = WMProto.actionMoveWorkspaceRight;
-    WindowManager.prototype.actionMoveWorkspaceRight = function () {
+    WMProto.actionMoveWorkspaceRight = function () {
         moveWorkspace(RIGHT, WRAPAROUND);
     };
 }
