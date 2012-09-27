@@ -9,6 +9,8 @@ This is what it does:
 * updating the workspaces display in the overview to reflect the workspace grid layout
 * updating the workspace switcher/keybindings to reflect the workspace grid layout
 
+Note - if you use a bottom panel, [Frippery Bottom Panel](https://extensions.gnome.org/extension/3/bottom-panel/) **already has** workspace grid functionality (I didn't realise until I finished writing this extension)!
+
 | Workspace switcher/keybindings | Workspace thumbnails in Overview |
 |:-----:|:-----:|
 | ![Workspace switcher](http://cdn.bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension/downloads/workspace-switcher.png) | ![Workspace thumbnails](http://cdn.bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension/downloads/workspace-thumbnails.png) |
@@ -21,6 +23,8 @@ Report bugs: [on the Issues page at bitbucket](https://bitbucket.org/mathematica
 ## Other relevant extensions
 Combine these extensions with this one or just use these if this doesn't do what you want:
 
+If you use a bottom panel, [Frippery Bottom Panel](https://extensions.gnome.org/extension/3/bottom-panel/) *already has* workspace grid functionality (I didn't realise until I finished writing this extension)!
+
 If you just want static workspaces and none of this grid stuff, use the [Frippery Static Workspaces extension](https://extensions.gnome.org/extension/12/static-workspaces/).
 
 If you do not want the workspace thumbnail preview in the overview, use the [Remove Workspaces Sidebar extension](https://extensions.gnome.org/extension/387/remove-workspaces-sidebar/).
@@ -29,7 +33,7 @@ If you want a textual workspace indicator in your panel, use the [Workspace Indi
 
 If you want to use arrow keys to navigate between workspaces in the overview, use the [Workspace navigator extension](https://extensions.gnome.org/extension/29/workspace-navigator/).
 
-If you want a graphical workspace indicator in your panel (_a la_ GNOME-panel's Workspace Switcher Applet with the window icon snapshots and all), I am working on a [Graphical Workspace Indicator extension](https://bitbucket.org/mathematicalcoffee/graphical-workspace-indicator-gnome-shell-extension) compatible with this one (still in progress...). There's a simpler version of a the GNOME 2.x workspace switcher currently (20/Sep) in review on e.g.o: [WorkspaceBar](https://extensions.gnome.org/review/1856) (It displays workspace numbers and all in one row. Very handy.).
+If you want a graphical workspace indicator/switcher in your panel (like GNOME-panel's workspace switcher, but without the window previews), see the [WorkspaceBar extension](https://extensions.gnome.org/extension/464/workspacebar/). (I am working on a version with the window icons and such but it's still in progress).
 
 Let me know of similar extensions to add to this list.
 

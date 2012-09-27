@@ -4,7 +4,7 @@
  "uuid": "workspace-grid@mathematical.coffee.gmail.com",
  "settings-schema": "org.gnome.shell.extensions.workspace-grid",
  "gettext-domain": "workspace-grid",
- "description": "Arranges workspaces in a configurable grid.\nAlso:\n* implements keybindings for left/right workspace navigation (up/down are already implemented)\n* updates workspaces sidebar with grid configuration (use Remove Workspaces Sidebar if you don't want it)",
+ "description": "Arranges workspaces in a configurable grid.\nAlso:\n* implements keybindings for left/right workspace navigation (up/down are already implemented)\n* updates workspaces sidebar with grid configuration (use Remove Workspaces Sidebar if you don't want it).\n\nYou may also wish to consider instead of/with this extension: Frippery Bottom Panel (already has workspace grid functionality if you want a bottom panel); Frippery Static Workspaces (holds the number of workspaces static and skips all the workspace grid stuff); Remove Workspaces Sidebar; Workspace Indicator Extension (textual indicator/workspace switcher); WorkspaceBar (graphical indicator/workspace switcher); Workspace navigator extension (use arrow keys to navigate workspaces in the Overview).\nSee homepage for more details.",
  "shell-version": [ 
      "3.2"
  ],
