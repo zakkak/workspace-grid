@@ -89,6 +89,7 @@
 ////////// CODE ///////////
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
+const Mainloop = imports.mainloop;
 const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
@@ -1139,9 +1140,11 @@ function modifyNumWorkspaces() {
      * GNOME 3.4 bug, see the Frippery Static Workspaces extension. Can confirm
      * but cannot find a relevant bug report/fix.)
      */
+    let workspacesChanged = false;
     if (Meta.prefs_get_dynamic_workspaces()) {
         let newtotal = (global.screen.workspace_grid.rows *
             global.screen.workspace_grid.columns);
+        workspacesChanged = true;
         if (global.screen.n_workspaces < newtotal) {
             for (let i = global.screen.n_workspaces; i < newtotal; ++i) {
                 global.screen.append_new_workspace(false,
@@ -1154,6 +1157,8 @@ function modifyNumWorkspaces() {
                         global.get_current_time()
                 );
             }
+        } else {
+            workspacesChanged = false;
         }
     }
 
@@ -1165,6 +1170,14 @@ function modifyNumWorkspaces() {
         global.screen.workspace_grid.columns
     );
 
+    // if we haven't already emitted notify::n-workspaces signals through
+    // adding/removing workspaces up to our target number, we should do it
+    // now to force the workspaces display to update.
+    if (!workspacesChanged) {
+        // this forces the workspaces display to update itself to match the new
+        // number of workspaces.
+        global.screen.notify('n-workspaces');
+    }
 }
 
 function unmodifyNumWorkspaces() {
@@ -1280,19 +1293,21 @@ function enable() {
     settings = Convenience.getSettings();
     makeWorkspacesStatic();
     exportFunctionsAndConstants(); // so other extension authors can use.
-    modifyNumWorkspaces();
     overrideKeybindingsAndPopup();
     overrideWorkspaceDisplay();
+    // Main.start() gets in one call to _nWorkspacesChanged that appears to
+    // be queued before any extensions enabled (so my subsequent patching
+    // doesn't do anything), but takes affect *after* my `modifyNumWorkspaces`
+    // call, killing all the extra workspaces I just added...
+    // So we wait a little bit before caling.
+    //modifyNumWorkspaces();
+    Mainloop.idle_add(modifyNumWorkspaces);
 
     // Connect settings change: the only one we have to monitor is cols/rows
     signals.push(settings.connect('changed::' + KEY_ROWS, nWorkspacesChanged));
     signals.push(settings.connect('changed::' + KEY_COLS, nWorkspacesChanged));
     signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
     signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
-
-    // this forces the workspaces display to update itself to match the new
-    // number of workspaces.
-    global.screen.notify('n-workspaces');
 }
 
 function nWorkspacesChanged() {
