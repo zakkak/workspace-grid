@@ -20,6 +20,7 @@
  *   (Exported Constants)
  *   - Directions = { UP, LEFT, RIGHT, DOWN } : directions for navigating (see
  *                                              moveWorkspaces further down)
+ *     (NOTE: for 3.6+ this is the same as Meta.MotionDirection.{UP,LEFT,RIGHT,DOWN})
  *   - rows     : number of rows of workspaces
  *   - columns  : number of columns of workspaces
  *
@@ -111,10 +112,23 @@ const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
 const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
 const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
 
-const UP = 'switch-to-workspace-up';
-const DOWN = 'switch-to-workspace-down';
-const LEFT = 'switch-to-workspace-left';
-const RIGHT = 'switch-to-workspace-right';
+// laziness
+const UP = Meta.MotionDirection.UP;
+const DOWN = Meta.MotionDirection.DOWN;
+const LEFT = Meta.MotionDirection.LEFT;
+const RIGHT = Meta.MotionDirection.RIGHT;
+const Keybindings = {
+    UP: 'switch-to-workspace-up',
+    DOWN: 'switch-to-workspace-down',
+    LEFT: 'switch-to-workspace-left',
+    RIGHT: 'switch-to-workspace-right'
+};
+const BindingToDirection = {
+    'switch-to-workspace-up': UP,
+    'switch-to-workspace-down': DOWN,
+    'switch-to-workspace-left': LEFT,
+    'switch-to-workspace-right': RIGHT
+};
 /* it seems the max number of workspaces is 36
  * (MAX_REASONABLE_WORKSPACES in mutter/src/core/prefs.c)
  */
@@ -230,6 +244,11 @@ function moveWorkspace(direction, wraparound) {
 
     if (!workspaceSwitcherPopup) {
         workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
+        // in GNOME 3.6 instead of storing the popup for next time, it's
+        // destroyed every single time it fades out..
+        workspaceSwitcherPopup.connect('destroy', function () {
+            workspaceSwitcherPopup = null;
+        });
     }
 
     // show the workspace switcher popup
@@ -238,6 +257,7 @@ function moveWorkspace(direction, wraparound) {
     }
 }
 
+// GNOME 3.6: _redraw --> _redisplay
 /************
  * Workspace Switcher that can do rows and columns as opposed to just rows.
  ************/
@@ -344,35 +364,52 @@ const WorkspaceSwitcherPopup = new Lang.Class({
         }
     },
 
-    _redraw: function (direction, activeWorkspaceIndex) {
+    // GNOME 3.6: old _redraw + _position is now combined into _redisplay
+    // Also, workspace switcher is *destroyed* whenever it fades out.
+    // Previously it was stored.
+    _redisplay: function () {
+        //log('redisplay, direction ' + this._direction + ', going to ' + this._activeWorkspaceIndex);
         this._list.destroy_all_children();
 
-        for (let i = 0; i < global.screen.n_workspaces; ++i) {
+        for (let i = 0; i < global.screen.n_workspaces; i++) {
             let indicator = null;
 
-            if (i === activeWorkspaceIndex && direction === UP) {
+           if (i == this._activeWorkspaceIndex &&
+                   this._direction == UP) {
                 indicator = new St.Bin({
                     style_class: 'ws-switcher-active-up'
                 });
-            } else if (i === activeWorkspaceIndex && direction === DOWN) {
+           } else if (i == this._activeWorkspaceIndex &&
+                   this._direction == DOWN) {
                 indicator = new St.Bin({
                     style_class: 'ws-switcher-active-down'
                 });
-            } else if (i === activeWorkspaceIndex && direction === LEFT) {
+           } else if (i == this._activeWorkspaceIndex &&
+                   this._direction == LEFT) {
                 indicator = new St.Bin({
                     style_class: 'ws-switcher-active-left'
                 });
-            } else if (i === activeWorkspaceIndex && direction === RIGHT) {
+           } else if (i == this._activeWorkspaceIndex &&
+                   this._direction == RIGHT) {
                 indicator = new St.Bin({
                     style_class: 'ws-switcher-active-right'
                 });
-            } else {
-                indicator = new St.Bin({style_class: 'ws-switcher-box'});
-            }
+           } else {
+               indicator = new St.Bin({ style_class: 'ws-switcher-box' });
+           }
+           this._list.add_actor(indicator);
+        }
 
-            this._list.add_actor(indicator);
+        let primary = Main.layoutManager.primaryMonitor;
+        if (this._container.mapped) {
+        let [containerMinHeight, containerNatHeight] = this._container.get_preferred_height(global.screen_width);
+        let [containerMinWidth, containerNatWidth] = this._container.get_preferred_width(containerNatHeight);
+        this._container.x = primary.x + Math.floor((primary.width - containerNatWidth) / 2);
+        this._container.y = primary.y + Main.panel.actor.height +
+                            Math.floor(((primary.height - Main.panel.actor.height) - containerNatHeight) / 2);
         }
     }
+
 });
 
 /* Keybinding handler.
@@ -382,17 +419,18 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    moveWorkspace(binding.get_name(), settings.get_boolean(KEY_WRAPAROUND));
+    moveWorkspace(BindingToDirection[binding.get_name()],
+            settings.get_boolean(KEY_WRAPAROUND));
 }
 
 /******************
  * Overrides the 'switch_to_workspace_XXX' keybindings
  ******************/
 function overrideKeybindingsAndPopup() {
-    Meta.keybindings_set_custom_handler(LEFT, showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler(RIGHT, showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler(UP, showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler(DOWN, showWorkspaceSwitcher);
+    Meta.keybindings_set_custom_handler(Keybindings.LEFT, showWorkspaceSwitcher);
+    Meta.keybindings_set_custom_handler(Keybindings.RIGHT, showWorkspaceSwitcher);
+    Meta.keybindings_set_custom_handler(Keybindings.UP, showWorkspaceSwitcher);
+    Meta.keybindings_set_custom_handler(Keybindings.DOWN, showWorkspaceSwitcher);
 
     // make sure our keybindings work when (e.g.) overview is open too.
     globalKeyPressHandler = Main._globalKeyPressHandler;
@@ -456,13 +494,13 @@ function overrideKeybindingsAndPopup() {
 /* Restore the original keybindings */
 function unoverrideKeybindingsAndPopup() {
     // Restore t
-    Meta.keybindings_set_custom_handler(LEFT, Lang.bind(Main.wm,
+    Meta.keybindings_set_custom_handler(Keybindings.LEFT, Lang.bind(Main.wm,
                 Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler(RIGHT, Lang.bind(Main.wm,
+    Meta.keybindings_set_custom_handler(Keybindings.RIGHT, Lang.bind(Main.wm,
                 Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler(UP, Lang.bind(Main.wm,
+    Meta.keybindings_set_custom_handler(Keybindings.UP, Lang.bind(Main.wm,
                 Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler(DOWN, Lang.bind(Main.wm,
+    Meta.keybindings_set_custom_handler(Keybindings.DOWN, Lang.bind(Main.wm,
                 Main.wm._showWorkspaceSwitcher));
 
     Main._globalKeyPressHandler = globalKeyPressHandler;
@@ -803,7 +841,7 @@ const ThumbnailsBox = new Lang.Class({
         // If the thumbnails box is "too wide" (see
         //  MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE), then we should always
         //  collapse the workspace thumbnails by default.
-        Main.overview._workspacesDisplay._alwaysZoomOut = (width <=
+        _getWorkspaceDisplay()._alwaysZoomOut = (width <=
                 (Main.layoutManager.primaryMonitor.width *
                  settings.get_double(KEY_MAX_HFRACTION_COLLAPSE)));
 
@@ -994,14 +1032,20 @@ const ThumbnailsBox = new Lang.Class({
     }
 });
 
+// GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
+// GNOME 3.6: Main.overview._viewSelector._workspacesDisplay
+function _getWorkspaceDisplay() {
+    return Main.overview._workspacesDisplay || Main.overview._viewSelector._workspacesDisplay;
+}
+
 /* Get the thumbnails box to acknowledge a change in allowable width */
 function refreshThumbnailsBox() {
     // this is the only way I can find to get the thumbnailsbox to
     // re-allocate itself
-    Main.overview._workspacesDisplay.show();
-    Main.overview._workspacesDisplay.hide();
+    let wD = _getWorkspaceDisplay();
+    wD.show();
+    wD.hide();
 }
-
 /**
  * We need to:
  * 1) override the scroll event on workspaces display to allow sideways
@@ -1016,7 +1060,7 @@ function overrideWorkspaceDisplay() {
     // We'll have to destroy controls and re-create it (because it doesn't even
     // have .disconnectAll()!)
     // The following mirrors _init in WorkspacesDisplay.
-    let wD = Main.overview._workspacesDisplay;
+    let wD = _getWorkspaceDisplay();
     let controls = wD._controls = new St.Bin({
         style_class: 'workspace-controls',
         request_mode: Clutter.RequestMode.WIDTH_FOR_HEIGHT,
@@ -1058,7 +1102,7 @@ function overrideWorkspaceDisplay() {
 }
 
 function unoverrideWorkspaceDisplay() {
-    let wD = Main.overview._workspacesDisplay;
+    let wD = _getWorkspaceDisplay();
     // put the original _scrollEvent back again
     if (onScrollId) {
         wD._controls.disconnect(onScrollId);
@@ -1228,6 +1272,7 @@ function unexportFunctionsAndConstants() {
 function init() {
 }
 
+let signals = [];
 function enable() {
     /// Storage
     nWorkspaces = Meta.prefs_get_num_workspaces();
@@ -1240,10 +1285,10 @@ function enable() {
     overrideWorkspaceDisplay();
 
     // Connect settings change: the only one we have to monitor is cols/rows
-    settings.connect('changed::' + KEY_ROWS, nWorkspacesChanged);
-    settings.connect('changed::' + KEY_COLS, nWorkspacesChanged);
-    settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox);
-    settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox);
+    signals.push(settings.connect('changed::' + KEY_ROWS, nWorkspacesChanged));
+    signals.push(settings.connect('changed::' + KEY_COLS, nWorkspacesChanged));
+    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
+    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
 
     // this forces the workspaces display to update itself to match the new
     // number of workspaces.
@@ -1264,7 +1309,10 @@ function disable() {
     unexportFunctionsAndConstants();
     unmakeWorkspacesStatic();
 
-    settings.disconnect_all();
+    let i = signals.length;
+    while (i--) {
+        settings.disconnect(signals.pop());
+    }
 
     // just in case, let everything else get used to the new number of
     // workspaces.
