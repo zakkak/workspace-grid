@@ -162,13 +162,11 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         } else {
             hscale.set_value(this._settings.get_double(key));
             hscale.connect('value-changed', Lang.bind(this, function () {
-                log('value-changed');
                 if (this._throttlers[key]) {
                     Mainloop.source_remove(this._throttlers[key]);
                 }
                 this._throttlers[key] = Mainloop.timeout_add(
                     SCALE_THROTTLE_TIMEOUT, Lang.bind(this, function () {
-                        log("emitted");
                         let value = hscale.get_value();
                         if (this._settings.get_double(key) !== value) {
                             this._settings.set_double(key, value);
