@@ -996,10 +996,16 @@ const ThumbnailsBox = new Lang.Class({
 
 /* Get the thumbnails box to acknowledge a change in allowable width */
 function refreshThumbnailsBox() {
-    // this is the only way I can find to get the thumbnailsbox to
-    // re-allocate itself
-    Main.overview._workspacesDisplay.show();
-    Main.overview._workspacesDisplay.hide();
+    if (Main.overview.visible) {
+        // we hope that when they close the overview and reopen it, that will
+        // do the trick.
+        // (they can't really use the prefs widget while in the overview anyway)
+        return;
+    }
+    // get the thumbnailsbox to re-allocate itself
+    // (TODO: for some reason the *first* overview show won't respect this but
+    // subsequent ones will).
+    Main.overview._workspacesDisplay._thumbnailsBox.actor.queue_relayout();
 }
 
 /**
