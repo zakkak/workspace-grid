@@ -1,5 +1,5 @@
 /*global global, log */ // <-- jshint
-/*jshint unused: true */
+/*jshint unused: true, maxlen: 150 */
 /* Workspaces Grid GNOME shell extension.
  *
  * mathematical.coffee <mathematical.coffee@gmail.com>
@@ -31,6 +31,10 @@
  *                     global.screen.get_workspace_by_index(i)
  *   - indexToRowCol : converts an index (0 to global.screen.n_workspaces-1) to
  *                     a row and column
+ *   - getWorkspaceSwitcherPopup : gets our workspace switcher popup so you
+ *                                 can show it if you want
+ *   - calculateWorkspace : returns the workspace index in the specified direction
+ *                          to the current, taking into account wrapping.
  *
  * For example, to move to the workspace below us:
  *     const WorkspaceGrid = global.screen.workspace_grid;
@@ -84,6 +88,14 @@
  * - destroy_children <-> destroy_all_children
  * - In 3.4 thumbnails box has a dropPlaceholder for dropping windows into new
  *   workspaces
+ *
+ * GNOME 3.4 <-> GNOME 3.6
+ * ---------
+ * - WorkspaceSwitcherPopup gets *destroyed* every time it disappears
+ * - Main.overview._workspacesDisplay -> Main.overview._viewSelector._workspacesDisplay
+ * - The old WorkspaceSwitcherPopup _redraw + _position combined into _redisplay.
+ * - Directions instead of being 'switch-to-workspace-*' are now Meta.MotionDirection
+ * - The workspace popup also shows for 'move-to-workspace-*' binings.
  */
 
 ////////// CODE ///////////
@@ -128,7 +140,11 @@ const BindingToDirection = {
     'switch-to-workspace-up': UP,
     'switch-to-workspace-down': DOWN,
     'switch-to-workspace-left': LEFT,
-    'switch-to-workspace-right': RIGHT
+    'switch-to-workspace-right': RIGHT,
+    'move-to-workspace-up': UP,
+    'move-to-workspace-down': DOWN,
+    'move-to-workspace-left': LEFT,
+    'move-to-workspace-right': RIGHT
 };
 /* it seems the max number of workspaces is 36
  * (MAX_REASONABLE_WORKSPACES in mutter/src/core/prefs.c)
@@ -145,11 +161,10 @@ const WMProto = WindowManager.WindowManager.prototype;
 let staticWorkspaceStorage = {};
 let wmStorage = {};
 let nWorkspaces;
-let workspaceSwitcherPopup = null;
+let _workspaceSwitcherPopup = null;
 let globalKeyPressHandler = null;
 let thumbnailsBox = null;
 let onScrollId = 0;
-let onetime = 0;
 let settings = 0;
 
 /***************
@@ -180,17 +195,24 @@ function rowColToIndex(row, col) {
     return idx;
 }
 
-/* Switch to the appropriate workspace.
- * direction is either UP, LEFT, RIGHT or DOWN.
- *
- * This can occur through:
- * - keybinding (wm.setKeybindingHandler)
- * - keybinding with global grab in progress (e.g. Overview/lg)
- * - scrolling/clicking in the overview
- * - (other extensions, e.g. navigate with up/down arrows:
- *        https://extensions.gnome.org/extension/29/workspace-navigator/)
- */
-function moveWorkspace(direction, wraparound) {
+/** Gets the workspace switcher popup, creating if it doesn't exist. */
+function getWorkspaceSwitcherPopup() {
+    if (!_workspaceSwitcherPopup) {
+        _workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
+        // just in case.
+        Main.wm._workspaceSwitcherPopup = _workspaceSwitcherPopup;
+        // in GNOME 3.6 instead of storing the popup for next time, it's
+        // destroyed every single time it fades out..
+        _workspaceSwitcherPopup.connect('destroy', function () {
+            _workspaceSwitcherPopup = null;
+            Main.wm._workspaceSwitcherPopup = null;
+        });
+    }
+    return _workspaceSwitcherPopup;
+}
+
+// calculates the workspace index in that direction.
+function calculateWorkspace(direction, wraparound) {
     let from = global.screen.get_active_workspace_index(),
         [row, col] = indexToRowCol(from),
         to;
@@ -236,6 +258,23 @@ function moveWorkspace(direction, wraparound) {
             to = rowColToIndex(0, col + 1);
         }
     }
+    return to;
+}
+
+
+/* Switch to the appropriate workspace, showing the workspace switcher.
+ * direction is either UP, LEFT, RIGHT or DOWN.
+ *
+ * This can occur through:
+ * - keybinding (wm.setKeybindingHandler)
+ * - keybinding with global grab in progress (e.g. Overview/lg)
+ * - scrolling/clicking in the overview
+ * - (other extensions, e.g. navigate with up/down arrows:
+ *        https://extensions.gnome.org/extension/29/workspace-navigator/)
+ */
+function moveWorkspace(direction, wraparound) {
+    let from = global.screen.get_active_workspace_index(),
+        to = calculateWorkspace(direction, wraparound);
 
     //log('moving from workspace %d to %d'.format(from, to));
     if (to !== from) {
@@ -243,18 +282,9 @@ function moveWorkspace(direction, wraparound) {
                 global.get_current_time());
     }
 
-    if (!workspaceSwitcherPopup) {
-        workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
-        // in GNOME 3.6 instead of storing the popup for next time, it's
-        // destroyed every single time it fades out..
-        workspaceSwitcherPopup.connect('destroy', function () {
-            workspaceSwitcherPopup = null;
-        });
-    }
-
-    // show the workspace switcher popup
+    // show workspace switcher
     if (!Main.overview.visible) {
-        workspaceSwitcherPopup.display(direction, to);
+        getWorkspaceSwitcherPopup().display(direction, to);
     }
 }
 
@@ -375,63 +405,90 @@ const WorkspaceSwitcherPopup = new Lang.Class({
         for (let i = 0; i < global.screen.n_workspaces; i++) {
             let indicator = null;
 
-           if (i == this._activeWorkspaceIndex &&
-                   this._direction == UP) {
+            if (i === this._activeWorkspaceIndex &&
+                   this._direction === UP) {
                 indicator = new St.Bin({
                     style_class: 'ws-switcher-active-up'
                 });
-           } else if (i == this._activeWorkspaceIndex &&
-                   this._direction == DOWN) {
+            } else if (i === this._activeWorkspaceIndex &&
+                   this._direction === DOWN) {
                 indicator = new St.Bin({
                     style_class: 'ws-switcher-active-down'
                 });
-           } else if (i == this._activeWorkspaceIndex &&
-                   this._direction == LEFT) {
+            } else if (i === this._activeWorkspaceIndex &&
+                   this._direction === LEFT) {
                 indicator = new St.Bin({
                     style_class: 'ws-switcher-active-left'
                 });
-           } else if (i == this._activeWorkspaceIndex &&
-                   this._direction == RIGHT) {
+            } else if (i === this._activeWorkspaceIndex &&
+                   this._direction === RIGHT) {
                 indicator = new St.Bin({
                     style_class: 'ws-switcher-active-right'
                 });
-           } else {
-               indicator = new St.Bin({ style_class: 'ws-switcher-box' });
-           }
-           this._list.add_actor(indicator);
+            } else {
+                indicator = new St.Bin({ style_class: 'ws-switcher-box' });
+            }
+            this._list.add_actor(indicator);
         }
 
         let primary = Main.layoutManager.primaryMonitor;
-        if (this._container.mapped) {
         let [containerMinHeight, containerNatHeight] = this._container.get_preferred_height(global.screen_width);
         let [containerMinWidth, containerNatWidth] = this._container.get_preferred_width(containerNatHeight);
         this._container.x = primary.x + Math.floor((primary.width - containerNatWidth) / 2);
         this._container.y = primary.y + Main.panel.actor.height +
                             Math.floor(((primary.height - Main.panel.actor.height) - containerNatHeight) / 2);
-        }
     }
 
 });
 
 /* Keybinding handler.
  * Should bring up a workspace switcher.
+ * Either activates the target workspace or if it's move-to-workspace-xxx
+ * we should move the window as well as show the workspace switcher.
  */
 function showWorkspaceSwitcher(display, screen, window, binding) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    moveWorkspace(BindingToDirection[binding.get_name()],
-            settings.get_boolean(KEY_WRAPAROUND));
+    let direction = BindingToDirection[binding.get_name()];
+    // like windowManager._showWorkspaceSwitcher
+    if (binding.get_name().substr(0, 5) === 'move-') {
+        let to = calculateWorkspace(direction,
+                settings.get_boolean(KEY_WRAPAROUND));
+        if (to !== global.screen.get_active_workspace_index()) {
+            Main.wm._movingWindow = window;
+            let ws = global.screen.get_workspace_by_index(to);
+            window.change_workspace(ws);
+            global.display.clear_mouse_mode();
+            ws.activate_with_focus(window, global.get_current_time());
+        }
+        // show workspace switcher
+        if (!Main.overview.visible) {
+            getWorkspaceSwitcherPopup().display(direction, to);
+        }
+    } else {
+        // ws.activate
+        moveWorkspace(BindingToDirection[binding.get_name()],
+                settings.get_boolean(KEY_WRAPAROUND));
+    }
 }
 
 /******************
  * Overrides the 'switch_to_workspace_XXX' keybindings
  ******************/
 function overrideKeybindingsAndPopup() {
+    // note - we could simply replace Main.wm._workspaceSwitcherPopup and
+    // not bother with taking over the keybindings, if not for the 'wraparound'
+    // stuff.
     Meta.keybindings_set_custom_handler(Keybindings.LEFT, showWorkspaceSwitcher);
     Meta.keybindings_set_custom_handler(Keybindings.RIGHT, showWorkspaceSwitcher);
     Meta.keybindings_set_custom_handler(Keybindings.UP, showWorkspaceSwitcher);
     Meta.keybindings_set_custom_handler(Keybindings.DOWN, showWorkspaceSwitcher);
+    // added for 3.6 @@
+    Meta.keybindings_set_custom_handler('move-to-workspace-left', showWorkspaceSwitcher);
+    Meta.keybindings_set_custom_handler('move-to-workspace-right', showWorkspaceSwitcher);
+    Meta.keybindings_set_custom_handler('move-to-workspace-up', showWorkspaceSwitcher);
+    Meta.keybindings_set_custom_handler('move-to-workspace-down', showWorkspaceSwitcher);
 
     // make sure our keybindings work when (e.g.) overview is open too.
     globalKeyPressHandler = Main._globalKeyPressHandler;
@@ -503,15 +560,30 @@ function unoverrideKeybindingsAndPopup() {
                 Main.wm._showWorkspaceSwitcher));
     Meta.keybindings_set_custom_handler(Keybindings.DOWN, Lang.bind(Main.wm,
                 Main.wm._showWorkspaceSwitcher));
+    // added for 3.6 @@
+    Meta.keybindings_set_custom_handler('move-to-workspace-left', Lang.bind(Main.wm,
+                Main.wm._showWorkspaceSwitcher));
+    Meta.keybindings_set_custom_handler('move-to-workspace-right', Lang.bind(Main.wm,
+                Main.wm._showWorkspaceSwitcher));
+    Meta.keybindings_set_custom_handler('move-to-workspace-up', Lang.bind(Main.wm,
+                Main.wm._showWorkspaceSwitcher));
+    Meta.keybindings_set_custom_handler('move-to-workspace-down', Lang.bind(Main.wm,
+                Main.wm._showWorkspaceSwitcher));
 
     Main._globalKeyPressHandler = globalKeyPressHandler;
 
-    workspaceSwitcherPopup = null;
+    _workspaceSwitcherPopup = null;
 
     WMProto.actionMoveWorkspaceUp = wmStorage.actionMoveWorkspaceUp;
     WMProto.actionMoveWorkspaceDown = wmStorage.actionMoveWorkspaceDown;
     WMProto.actionMoveWorkspaceLeft = wmStorage.actionMoveWorkspaceLeft;
     WMProto.actionMoveWorkspaceRight = wmStorage.actionMoveWorkspaceRight;
+}
+
+// GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
+// GNOME 3.6: Main.overview._viewSelector._workspacesDisplay
+function _getWorkspaceDisplay() {
+    return Main.overview._workspacesDisplay || Main.overview._viewSelector._workspacesDisplay;
 }
 
 /******************
@@ -759,7 +831,7 @@ const ThumbnailsBox = new Lang.Class({
         return this._indicatorX;
     },
 
-    _activeWorkspaceChanged: function (wm, from, to, direction) {
+    _activeWorkspaceChanged: function () {
         let thumbnail;
         let activeWorkspace = global.screen.get_active_workspace();
         for (let i = 0; i < this._thumbnails.length; i++) {
@@ -1033,12 +1105,6 @@ const ThumbnailsBox = new Lang.Class({
     }
 });
 
-// GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
-// GNOME 3.6: Main.overview._viewSelector._workspacesDisplay
-function _getWorkspaceDisplay() {
-    return Main.overview._workspacesDisplay || Main.overview._viewSelector._workspacesDisplay;
-}
-
 /* Get the thumbnails box to acknowledge a change in allowable width */
 function refreshThumbnailsBox() {
     // this is the only way I can find to get the thumbnailsbox to
@@ -1134,7 +1200,7 @@ function modifyNumWorkspaces() {
      * To *actually* increase/decrease the number of workspaces (to fire
      * notify::n-workspaces), we must use global.screen.append_new_workspace and
      * global.screen.remove_workspace.
-     *    
+     *   
      * We could just set org.gnome.shell.overrides.dynamic-workspaces to false
      * but then we can't drag and drop windows between workspaces (supposedly a
      * GNOME 3.4 bug, see the Frippery Static Workspaces extension. Can confirm
