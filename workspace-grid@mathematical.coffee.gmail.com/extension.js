@@ -1220,25 +1220,21 @@ function modifyNumWorkspaces() {
      * GNOME 3.4 bug, see the Frippery Static Workspaces extension. Can confirm
      * but cannot find a relevant bug report/fix.)
      */
-    let workspacesChanged = false;
-    if (Meta.prefs_get_dynamic_workspaces()) {
-        let newtotal = (global.screen.workspace_grid.rows *
-            global.screen.workspace_grid.columns);
-        workspacesChanged = true;
-        if (global.screen.n_workspaces < newtotal) {
-            for (let i = global.screen.n_workspaces; i < newtotal; ++i) {
-                global.screen.append_new_workspace(false,
-                        global.get_current_time());
-            }
-        } else if (global.screen.n_workspaces > newtotal) {
-            for (let i = global.screen.n_workspaces - 1; i >= newtotal; --i) {
-                global.screen.remove_workspace(
-                        global.screen.get_workspace_by_index(i),
-                        global.get_current_time()
-                );
-            }
-        } else {
-            workspacesChanged = false;
+    // Hmm - in 3.6 this is the only way I can get it working without dynamic
+    // workspaces too.
+    let newtotal = (global.screen.workspace_grid.rows *
+        global.screen.workspace_grid.columns);
+    if (global.screen.n_workspaces < newtotal) {
+        for (let i = global.screen.n_workspaces; i < newtotal; ++i) {
+            global.screen.append_new_workspace(false,
+                    global.get_current_time());
+        }
+    } else if (global.screen.n_workspaces > newtotal) {
+        for (let i = global.screen.n_workspaces - 1; i >= newtotal; --i) {
+            global.screen.remove_workspace(
+                    global.screen.get_workspace_by_index(i),
+                    global.get_current_time()
+            );
         }
     }
 
@@ -1250,14 +1246,9 @@ function modifyNumWorkspaces() {
         global.screen.workspace_grid.columns
     );
 
-    // if we haven't already emitted notify::n-workspaces signals through
-    // adding/removing workspaces up to our target number, we should do it
-    // now to force the workspaces display to update.
-    if (!workspacesChanged) {
-        // this forces the workspaces display to update itself to match the new
-        // number of workspaces.
-        global.screen.notify('n-workspaces');
-    }
+    // this forces the workspaces display to update itself to match the new
+    // number of workspaces.
+    global.screen.notify('n-workspaces');
 }
 
 function unmodifyNumWorkspaces() {
