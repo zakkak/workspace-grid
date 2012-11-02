@@ -96,6 +96,7 @@
  * - The old WorkspaceSwitcherPopup _redraw + _position combined into _redisplay.
  * - Directions instead of being 'switch-to-workspace-*' are now Meta.MotionDirection
  * - The workspace popup also shows for 'move-to-workspace-*' binings.
+ * - actionMoveWorkspace{Up,Down} --> actionMoveWorkspace
  */
 
 ////////// CODE ///////////
@@ -162,7 +163,7 @@ let staticWorkspaceStorage = {};
 let wmStorage = {};
 let nWorkspaces;
 let _workspaceSwitcherPopup = null;
-let globalKeyPressHandler = null;
+//let globalKeyPressHandler = null;
 let thumbnailsBox = null;
 let onScrollId = 0;
 let settings = 0;
@@ -273,7 +274,7 @@ function calculateWorkspace(direction, wraparound) {
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
 function moveWorkspace(direction, wraparound) {
-    let from = global.screen.get_active_workspace_index(),
+        let from = global.screen.get_active_workspace_index(),
         to = calculateWorkspace(direction, wraparound);
 
     //log('moving from workspace %d to %d'.format(from, to));
@@ -445,31 +446,25 @@ const WorkspaceSwitcherPopup = new Lang.Class({
  * Should bring up a workspace switcher.
  * Either activates the target workspace or if it's move-to-workspace-xxx
  * we should move the window as well as show the workspace switcher.
+ * This is the same as WindowManager._showWorkspaceSwitcher but we don't
+ * filter out RIGHT/LEFT actions like they do.
  */
 function showWorkspaceSwitcher(display, screen, window, binding) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    let direction = BindingToDirection[binding.get_name()];
-    // like windowManager._showWorkspaceSwitcher
+    let direction = BindingToDirection[binding.get_name()],
+        to;
     if (binding.get_name().substr(0, 5) === 'move-') {
-        let to = calculateWorkspace(direction,
-                settings.get_boolean(KEY_WRAPAROUND));
-        if (to !== global.screen.get_active_workspace_index()) {
-            Main.wm._movingWindow = window;
-            let ws = global.screen.get_workspace_by_index(to);
-            window.change_workspace(ws);
-            global.display.clear_mouse_mode();
-            ws.activate_with_focus(window, global.get_current_time());
-        }
-        // show workspace switcher
-        if (!Main.overview.visible) {
-            getWorkspaceSwitcherPopup().display(direction, to);
-        }
+        to = Main.wm.actionMoveWindow(window, direction); // we've patched ths
     } else {
-        // ws.activate
-        moveWorkspace(BindingToDirection[binding.get_name()],
-                settings.get_boolean(KEY_WRAPAROUND));
+        // we've patched this
+        to = Main.wm.actionMoveWorkspace(direction);
+    }
+
+    // show workspace switcher
+    if (!Main.overview.visible) {
+        getWorkspaceSwitcherPopup().display(direction, to.index());
     }
 }
 
@@ -491,19 +486,21 @@ function overrideKeybindingsAndPopup() {
     Meta.keybindings_set_custom_handler('move-to-workspace-down', showWorkspaceSwitcher);
 
     // make sure our keybindings work when (e.g.) overview is open too.
-    globalKeyPressHandler = Main._globalKeyPressHandler;
-    Main._globalKeyPressHandler = function (actor, event) {
-        /* First let our WORKSPACE_<direction> keybinding handlers override
-         * any in _globalKeyPressHandler, then proceed to _globalKeyPressHandler
-         */
+    // For some reason in 3.6 it appears this doesn't affect the callback,
+    // even though it's just a global.stage.connect and not a Lang.bind and
+    // this worked in 3.2-3.4
+    // So instead of overriding we'll just add our own handler.
+    //globalKeyPressHandler = Main._globalKeyPressHandler;
+    global.stage.connect('captured-event', function (actor, event) {
+        // same as _globalKeyPressHandler
         if (Main.modalCount === 0 ||
                 event.type() !== Clutter.EventType.KEY_PRESS) {
             return false;
         }
 
-        if (global.session_type === Shell.SessionType.USER &&
-                (!Main.overview.visible || Main.modalCount > 1)) {
-            return false;
+        if (!Main.sessionMode.allowKeybindingsWhenModal) {
+            if (Main.modalCount > (Main.overview.visible ? 1 : 0))
+                return false;
         }
 
         let keyCode = event.get_key_code(),
@@ -512,40 +509,52 @@ function overrideKeybindingsAndPopup() {
             action = global.display.get_keybinding_action(keyCode,
                     modifierState);
 
+        // UP and DOWN are already handled by the original
+        // Main._globalKeyPressHandler and call actionMoveWorkspace which
+        // we've patched.
+        // We just grab RIGHT and LEFT.
         switch (action) {
         case Meta.KeyBindingAction.WORKSPACE_LEFT:
+            if (!Main.sessionMode.hasWorkspaces) {
+                return false;
+            }
             moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
             return true;
         case Meta.KeyBindingAction.WORKSPACE_RIGHT:
+            if (!Main.sessionMode.hasWorkspaces) {
+                return false;
+            }
             moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
             return true;
-        case Meta.KeyBindingAction.WORKSPACE_UP:
-            moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
-            return true;
-        case Meta.KeyBindingAction.WORKSPACE_DOWN:
-            moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
-            return true;
         }
-        return globalKeyPressHandler(actor, event);
-    };
+    });
 
-    // Override imports.ui.windowManager.actionMoveWorkspace* just in case other
+    // Override imports.ui.windowManager.actionMove* just in case other
     // extensions use them.
-    wmStorage.actionMoveWorkspaceUp = WMProto.actionMoveWorkspaceUp;
-    WMProto.actionMoveWorkspaceUp = function () {
-        moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
+    wmStorage.actionMoveWorkspace = WMProto.actionMoveWorkspace;
+    WMProto.actionMoveWorkspace = function (direction) {
+        let from = global.screen.get_active_workspace_index(),
+            to = calculateWorkspace(direction, settings.get_boolean(KEY_WRAPAROUND)),
+            ws = global.screen.get_workspace_by_index(to);
+
+        if (to !== from) {
+            ws.activate(global.get_current_time());
+        }
+        return ws;
     };
-    wmStorage.actionMoveWorkspaceDown = WMProto.actionMoveWorkspaceDown;
-    WMProto.actionMoveWorkspaceDown = function () {
-        moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
-    };
-    wmStorage.actionMoveWorkspaceLeft = WMProto.actionMoveWorkspaceLeft;
-    WMProto.actionMoveWorkspaceLeft = function () {
-        moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
-    };
-    wmStorage.actionMoveWorkspaceRight = WMProto.actionMoveWorkspaceRight;
-    WMProto.actionMoveWorkspaceRight = function () {
-        moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
+    wmStorage.actionMoveWindow = WMProto.actionMoveWindow;
+    WMProto.actionMoveWindow = function (window, direction) {
+        let to = calculateWorkspace(direction,
+                settings.get_boolean(KEY_WRAPAROUND)),
+            ws = global.screen.get_workspace_by_index(to);
+
+        if (to !== global.screen.get_active_workspace_index()) {
+            Main.wm._movingWindow = window;
+            window.change_workspace(ws);
+            global.display.clear_mouse_mode();
+            ws.activate_with_focus(window, global.get_current_time());
+        }
+        return ws;
     };
 }
 
@@ -570,14 +579,12 @@ function unoverrideKeybindingsAndPopup() {
     Meta.keybindings_set_custom_handler('move-to-workspace-down', Lang.bind(Main.wm,
                 Main.wm._showWorkspaceSwitcher));
 
-    Main._globalKeyPressHandler = globalKeyPressHandler;
+    //Main._globalKeyPressHandler = globalKeyPressHandler;
 
     _workspaceSwitcherPopup = null;
 
-    WMProto.actionMoveWorkspaceUp = wmStorage.actionMoveWorkspaceUp;
-    WMProto.actionMoveWorkspaceDown = wmStorage.actionMoveWorkspaceDown;
-    WMProto.actionMoveWorkspaceLeft = wmStorage.actionMoveWorkspaceLeft;
-    WMProto.actionMoveWorkspaceRight = wmStorage.actionMoveWorkspaceRight;
+    WMProto.actionMoveWorkspace = wmStorage.actionMoveWorkspace;
+    WMProto.actionMoveWindow = wmStorage.actionMoveWindow;
 }
 
 // GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
