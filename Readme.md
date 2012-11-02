@@ -98,7 +98,7 @@ The `global.screen.workspace_grid` object contains:
 
 (Exported Constants)
 
-* `Directions` = `{ UP, LEFT, RIGHT, DOWN }` : directions for navigating (see `moveWorkspaces` further down)
+* `Directions` = `{ UP, LEFT, RIGHT, DOWN }` : directions for navigating (see `moveWorkspaces` further down) (**NOTE**: From 3.6+ just use `Meta.MotionDirection.{UP, LEFT, RIGHT, DOWN}`)
 * `rows`     : number of rows of workspaces
 * `columns`  : number of columns of workspaces
 
@@ -107,6 +107,9 @@ The `global.screen.workspace_grid` object contains:
 * `moveWorkspace` : switches workspaces in the direction specified, being either (`Directions.`)`UP`, `LEFT`, `RIGHT` or `DOWN` (see `Directions`).
 * `rowColToIndex` : converts the row/column into an index for use with (e.g.) `global.screen.get_workspace_by_index(i)`
 * indexToRowCol : converts an index (`0 to global.screen.n_workspaces-1`) to a row and column
+* calculateWorkspace : calculates the index of the workspace adjacent in the specified direction to the current one.
+* getWorkspaceSwitcherPopup : retrieves our workspace switcher popup.
+
 
 For example, to move to the workspace below us:
 
