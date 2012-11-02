@@ -9,6 +9,7 @@ const GObject = imports.gi.GObject;
 const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
 const Lang = imports.lang;
+const Mainloop = imports.mainloop;
 
 const Gettext = imports.gettext.domain('workspace-grid');
 const _ = Gettext.gettext;
@@ -41,6 +42,13 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this.margin = this.row_spacing = this.column_spacing = 10;
         this._rownum = 0;
         this._settings = Convenience.getSettings();
+        // we use this to throttle the number of 'value-changed' signals that
+        // are re-transmitted as settings changes, because when the user uses
+        // a Gtk.Scale I get a signal for every single change of value including
+        // where the user grabs the handle, drags it, and drops it (I get signals
+        // for all the in-between values too where I just want the signal for
+        // the end value).
+        this._throttlers = {};
 
         let item = new Gtk.Label({
             label: _("NOTE: maximum number of workspaces is 36.")
@@ -128,21 +136,47 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
                 lower, upper, increment);
         hscale.set_digits(is_int ? 0 : 2);
         hscale.set_hexpand(true);
+        this._throttlers[key] = 0;
+
+        // only send the _settings change for the *last* value-changed
+        // if there are a string of them, e.g. for all the intermediate
+        // values between drag-start and drag-end of the slider.
+        const SCALE_THROTTLE_TIMEOUT = 500;
         if (is_int) {
             hscale.set_value(this._settings.get_int(key));
             hscale.connect('value-changed', Lang.bind(this, function () {
-                let value = hscale.get_value();
-                if (this._settings.get_int(key) !== value) {
-                    this._settings.set_int(key, value);
+                if (this._throttlers[key]) {
+                    Mainloop.source_remove(this._throttlers[key]);
                 }
+                this._throttlers[key] = Mainloop.timeout_add(
+                    SCALE_THROTTLE_TIMEOUT, Lang.bind(this, function () {
+                        let value = hscale.get_value();
+                        if (this._settings.get_int(key) !== value) {
+                            this._settings.set_int(key, value);
+                        }
+                        this._throttlers[key] = 0;
+                        return false;
+                    })
+                );
             }));
         } else {
             hscale.set_value(this._settings.get_double(key));
             hscale.connect('value-changed', Lang.bind(this, function () {
-                let value = hscale.get_value();
-                if (this._settings.get_double(key) !== value) {
-                    this._settings.set_double(key, value);
+                log('value-changed');
+                if (this._throttlers[key]) {
+                    Mainloop.source_remove(this._throttlers[key]);
                 }
+                this._throttlers[key] = Mainloop.timeout_add(
+                    SCALE_THROTTLE_TIMEOUT, Lang.bind(this, function () {
+                        log("emitted");
+                        let value = hscale.get_value();
+                        if (this._settings.get_double(key) !== value) {
+                            this._settings.set_double(key, value);
+                        }
+                        this._throttlers[key] = 0;
+                        return false;
+                    })
+                );
             }));
         }
         return this.addRow(text, hscale, true);

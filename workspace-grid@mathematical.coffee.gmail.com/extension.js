@@ -1114,12 +1114,19 @@ const ThumbnailsBox = new Lang.Class({
 
 /* Get the thumbnails box to acknowledge a change in allowable width */
 function refreshThumbnailsBox() {
-    // this is the only way I can find to get the thumbnailsbox to
-    // re-allocate itself
+    if (Main.overview.visible) {
+        // we hope that when they close the overview and reopen it, that will
+        // do the trick.
+        // (they can't really use the prefs widget while in the overview anyway)
+        return;
+    }
+    // get the thumbnailsbox to re-allocate itself
+    // (TODO: for some reason the *first* overview show won't respect this but
+    // subsequent ones will).
     let wD = _getWorkspaceDisplay();
-    wD.show();
-    wD.hide();
+    wD._thumbnailsBox.actor.queue_relayout();
 }
+
 /**
  * We need to:
  * 1) override the scroll event on workspaces display to allow sideways
