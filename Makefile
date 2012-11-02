@@ -1,6 +1,6 @@
 #=============================================================================
 UUID=workspace-grid@mathematical.coffee.gmail.com
-FILES=metadata.json *.js stylesheet.css schemas *.svg
+FILES=metadata.json *.js stylesheet.css schemas *.svg *.png
 #=============================================================================
 default_target: all
 .PHONY: clean all zip
