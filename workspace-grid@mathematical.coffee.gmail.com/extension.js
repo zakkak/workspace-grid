@@ -20,7 +20,7 @@
  *   (Exported Constants)
  *   - Directions = { UP, LEFT, RIGHT, DOWN } : directions for navigating (see
  *                                              moveWorkspaces further down)
- *     (NOTE: for 3.6+ this is the same as Meta.MotionDirection.{UP,LEFT,RIGHT,DOWN})
+ *     (NOTE: for 3.6+ you can just use Meta.MotionDirection.{UP,LEFT,RIGHT,DOWN})
  *   - rows     : number of rows of workspaces
  *   - columns  : number of columns of workspaces
  *
@@ -1341,6 +1341,8 @@ function exportFunctionsAndConstants() {
 
         rowColToIndex: rowColToIndex,
         indexToRowCol: indexToRowCol,
+        getWorkspaceSwitcherPopup: getWorkspaceSwitcherPopup,
+        calculateWorkspace: calculateWorkspace,
         moveWorkspace: moveWorkspace
     };
 
