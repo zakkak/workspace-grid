@@ -125,6 +125,7 @@ const KEY_COLS = Prefs.KEY_COLS;
 const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
 const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
 const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
+const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
 
 // laziness
 const UP = Meta.MotionDirection.UP;
@@ -405,6 +406,7 @@ const WorkspaceSwitcherPopup = new Lang.Class({
 
         for (let i = 0; i < global.screen.n_workspaces; i++) {
             let indicator = null;
+            let name = Meta.prefs_get_workspace_name(i);
 
             if (i === this._activeWorkspaceIndex &&
                    this._direction === UP) {
@@ -427,8 +429,15 @@ const WorkspaceSwitcherPopup = new Lang.Class({
                     style_class: 'ws-switcher-active-right'
                 });
             } else {
-                indicator = new St.Bin({ style_class: 'ws-switcher-box' });
+                indicator = new St.Bin({style_class: 'ws-switcher-box'});
             }
+            if (settings.get_boolean(KEY_SHOW_WORKSPACE_LABELS) && i !== this._activeWorkspaceIndex) {
+                indicator.child = new St.Label({
+                    text: name,
+                    style_class: 'ws-switcher-label'
+                });
+            }
+
             this._list.add_actor(indicator);
         }
 

@@ -29,6 +29,11 @@
     padding: 20px;
 }
 
+.ws-switcher-label {
+    color: rgba(128, 128, 128, 0.40);
+    font-size: 2em;
+}
+
 /* FIXME: include the horizontal .placeholder here? */
 .placeholder-vertical {
     background-image: url("dash-placeholder-vertical.svg");
