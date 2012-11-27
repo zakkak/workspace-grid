@@ -28,3 +28,8 @@
     border-radius: 24px;
     padding: 20px;
 }
+
+.ws-switcher-label {
+    color: rgba(128, 128, 128, 0.40);
+    font-size: 2em;
+}

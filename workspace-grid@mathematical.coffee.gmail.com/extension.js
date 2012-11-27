@@ -105,6 +105,9 @@ const MAX_SCREEN_HFRACTION = 0.8;
 // Must be <= MAX_SCREEN_HFRACTION.
 const MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE = 0.3;
 
+// show the labels of the workspaces on the switcher?
+const SHOW_WORKSPACE_LABELS = true;
+
 ////////// CODE ///////////
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
@@ -361,6 +364,7 @@ WorkspaceSwitcherPopup.prototype = {
 
         for (let i = 0; i < global.screen.n_workspaces; ++i) {
             let indicator = null;
+            let name = Meta.prefs_get_workspace_name(i);
 
             if (i === activeWorkspaceIndex && direction === UP) {
                 indicator = new St.Bin({
@@ -380,6 +384,12 @@ WorkspaceSwitcherPopup.prototype = {
                 });
             } else {
                 indicator = new St.Bin({style_class: 'ws-switcher-box'});
+            }
+            if (SHOW_WORKSPACE_LABELS && i !== activeWorkspaceIndex) {
+                indicator.child = new St.Label({
+                    text: name,
+                    style_class: 'ws-switcher-label'
+                });
             }
 
             this._list.add_actor(indicator);
