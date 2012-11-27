@@ -23,6 +23,7 @@ const KEY_COLS = 'num-columns';
 const KEY_WRAPAROUND = 'wraparound';
 const KEY_MAX_HFRACTION = 'max-screen-fraction';
 const KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
+const KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
 
 function init() {
     Convenience.initTranslations();
@@ -65,6 +66,9 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
     
         this.addBoolean(_("Wraparound workspaces when navigating?"),
             KEY_WRAPAROUND);
+
+        this.addBoolean(_("Show workspace labels in the switcher?"),
+            KEY_SHOW_WORKSPACE_LABELS);
 
         item = new Gtk.Label({
             label: _("The following settings determine how much horizontal " +
