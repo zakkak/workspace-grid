@@ -41,7 +41,7 @@ Let me know of similar extensions to add to this list.
 
 # Installation
 
-Hopefully, this will make it onto extensions.gnome.org.
+Available from [extensions.gnome.org](https://extensions.gnome.org/extension/484/workspace-grid/)
 
 Otherwise:
 
