@@ -123,6 +123,7 @@ const Prefs = Me.imports.prefs;
 const KEY_ROWS = Prefs.KEY_ROWS;
 const KEY_COLS = Prefs.KEY_COLS;
 const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
+const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
 const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
 const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
 const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
@@ -191,7 +192,7 @@ function getWorkspaceSwitcherPopup() {
 }
 
 // calculates the workspace index in that direction.
-function calculateWorkspace(direction, wraparound) {
+function calculateWorkspace(direction, wraparound, wrapToSame) {
     let from = global.screen.get_active_workspace_index(),
         [row, col] = indexToRowCol(from),
         to;
@@ -260,9 +261,9 @@ function calculateWorkspace(direction, wraparound) {
  * - (other extensions, e.g. navigate with up/down arrows:
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
-function moveWorkspace(direction, wraparound) {
-        let from = global.screen.get_active_workspace_index(),
-        to = calculateWorkspace(direction, wraparound);
+function moveWorkspace(direction, wraparound, wrapToSame) {
+    let from = global.screen.get_active_workspace_index(),
+    to = calculateWorkspace(direction, wraparound, wrapToSame);
 
     //log('moving from workspace %d to %d'.format(from, to));
     if (to !== from) {
@@ -284,7 +285,7 @@ const WorkspaceSwitcherPopup = new Lang.Class({
     Extends: WorkspaceSwitcher.WorkspaceSwitcherPopup,
 
     // note: this makes sure everything fits vertically and then adjust the
-    // horizontal to fit.
+    // horizontal to fit, wrapToSame.
     _getPreferredHeight : function (actor, forWidth, alloc) {
         let children = this._list.get_children(),
             primary = Main.layoutManager.primaryMonitor,
@@ -431,7 +432,8 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    moveWorkspace(binding.get_name(), settings.get_boolean(KEY_WRAPAROUND));
+    moveWorkspace(binding.get_name(), settings.get_boolean(KEY_WRAPAROUND),
+                  settings.get_boolean(KEY_WRAP_TO_SAME));
 }
 
 /******************
@@ -473,10 +475,12 @@ function overrideKeybindingsAndPopup() {
         // We just grab RIGHT and LEFT.
         switch (action) {
         case Meta.KeyBindingAction.WORKSPACE_LEFT:
-            moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
+            moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND),
+                          settings.get_boolean(KEY_WRAP_TO_SAME));
             return true;
         case Meta.KeyBindingAction.WORKSPACE_RIGHT:
-            moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
+            moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND),
+                          settings.get_boolean(KEY_WRAP_TO_SAME));
             return true;
         }
         return false;
@@ -486,19 +490,23 @@ function overrideKeybindingsAndPopup() {
     // extensions use them.
     wmStorage.actionMoveWorkspaceUp = WMProto.actionMoveWorkspaceUp;
     WMProto.actionMoveWorkspaceUp = function () {
-        moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
+        moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND),
+                      settings.get_boolean(KEY_WRAP_TO_SAME));
     };
     wmStorage.actionMoveWorkspaceDown = WMProto.actionMoveWorkspaceDown;
     WMProto.actionMoveWorkspaceDown = function () {
-        moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
+        moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND),
+                      settings.get_boolean(KEY_WRAP_TO_SAME));
     };
     wmStorage.actionMoveWorkspaceLeft = WMProto.actionMoveWorkspaceLeft;
     WMProto.actionMoveWorkspaceLeft = function () {
-        moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
+        moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND),
+                      settings.get_boolean(KEY_WRAP_TO_SAME));
     };
     wmStorage.actionMoveWorkspaceRight = WMProto.actionMoveWorkspaceRight;
     WMProto.actionMoveWorkspaceRight = function () {
-        moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
+        moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND),
+                      settings.get_boolean(KEY_WRAP_TO_SAME));
     };
 }
 
@@ -1113,7 +1121,6 @@ function unoverrideWorkspaceDisplay() {
         wD._controls.disconnect(onScrollId);
         onScrollId = 0;
     }
-    wD._controls.connect('scroll-event', Lang.bind(wD, wD._onScrollEvent));
 
     // replace the ThumbnailsBox with the original one
     thumbnailsBox.destroy();
