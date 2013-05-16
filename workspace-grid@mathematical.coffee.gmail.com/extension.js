@@ -204,7 +204,7 @@ function moveWorkspace(direction, wraparound, wrapToSame) {
     switch (direction) {
     case LEFT:
         if (col === 0) {
-            if (WRAPAROUND) {
+            if (wraparound) {
                 col = global.screen.workspace_grid.columns - 1;
                 if (!wrapToSame) row--;
             }
@@ -214,7 +214,7 @@ function moveWorkspace(direction, wraparound, wrapToSame) {
         break;
     case RIGHT:
         if (col === global.screen.workspace_grid.columns - 1) {
-            if (WRAPAROUND) {
+            if (wraparound) {
                 col = 0;
                 if (!wrapToSame) row++;
             }
@@ -224,7 +224,7 @@ function moveWorkspace(direction, wraparound, wrapToSame) {
         break;
     case UP:
         if (row === 0) {
-            if (WRAPAROUND) {
+            if (wraparound) {
                 row = global.screen.workspace_grid.rows - 1;
                 if (!wrapToSame) col--;
             }
@@ -234,7 +234,7 @@ function moveWorkspace(direction, wraparound, wrapToSame) {
         break;
     case DOWN:
         if (row === global.screen.workspace_grid.rows - 1) {
-            if (WRAPAROUND) {
+            if (wraparound) {
                 row = 0;
                 if (!wrapToSame) col++;
             }
