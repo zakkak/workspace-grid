@@ -198,44 +198,53 @@ function calculateWorkspace(direction, wraparound) {
 
     switch (direction) {
     case LEFT:
-        col = Math.max(0, col - 1);
+        if (col === 0) {
+            if (wraparound) {
+                col = global.screen.workspace_grid.columns - 1;
+                if (!wrapToSame) row--;
+            }
+        } else {
+            col--;
+        }
         break;
     case RIGHT:
-        col = Math.min(global.screen.workspace_grid.columns - 1, col + 1);
+        if (col === global.screen.workspace_grid.columns - 1) {
+            if (wraparound) {
+                col = 0;
+                if (!wrapToSame) row++;
+            }
+        } else {
+            col++;
+        }
         break;
     case UP:
-        row = Math.max(0, row - 1);
+        if (row === 0) {
+            if (wraparound) {
+                row = global.screen.workspace_grid.rows - 1;
+                if (!wrapToSame) col--;
+            }
+        } else {
+            row--;
+        }
         break;
     case DOWN:
-        row = Math.min(global.screen.workspace_grid.rows - 1, row + 1);
+        if (row === global.screen.workspace_grid.rows - 1) {
+            if (wraparound) {
+                row = 0;
+                if (!wrapToSame) col++;
+            }
+        } else {
+            row++;
+        }
         break;
     }
-    to = rowColToIndex(row, col);
-    if (to < 0) { // if we tried to move to a workspace after MAX_WORKSPACES
-        to = (wraparound ? 0 : from);
-    } else if (to === from && wraparound) {
-        // depends on the direction of scroll.
-        if (to === 0) {
-            to = global.screen.n_workspaces - 1;
-        } else if (to === global.screen.n_workspaces - 1) {
-            to = 0;
-        } else if (direction === LEFT) {
-            // if to === from, we must be at the start of the row.
-            // Go to the end of the previous row.
-            to -= 1;
-        } else if (direction === RIGHT) {
-            // if to === from, we must be at the start of the row.
-            // Go to the start of the next row.
-            to += 1;
-        } else if (direction === UP) {
-            // if to === from, we must be at the start of the column.
-            // Go to the end of the previous column.
-            to = rowColToIndex(global.screen.workspace_grid.rows - 1, col - 1);
-        } else if (direction === DOWN) {
-            // if to === from, we must be at the end of the column.
-            // Go to the start of the next column.
-            to = rowColToIndex(0, col + 1);
-        }
+    if (col < 0 || row < 0) {
+        to = global.screen.n_workspaces - 1;
+    } else if (col > global.screen.workspace_grid.columns - 1 ||
+               row > global.screen.workspace_grid.rows - 1) {
+        to = 0;
+    } else {
+        to = rowColToIndex(row, col);
     }
     return to;
 }
@@ -1063,39 +1072,26 @@ function refreshThumbnailsBox() {
  *    override ._getPreferredHeight etc that are passed in as *callbacks*).
  */
 function overrideWorkspaceDisplay() {
-    // 1) override scroll event. Note we can't just overwrite
-    // .prototype._onScrollEvent because somehow by then the old _onScrollEvent
-    // is already bound to the 'scroll-event' signal.
-    // We'll have to destroy controls and re-create it (because it doesn't even
-    // have .disconnectAll()!)
-    // The following mirrors _init in WorkspacesDisplay.
-    let wD = _getWorkspaceDisplay();
-    let controls = wD._controls = new St.Bin({
-        style_class: 'workspace-controls',
-        request_mode: Clutter.RequestMode.WIDTH_FOR_HEIGHT,
-        y_align: St.Align.START,
-        y_fill: true
-    });
-    wD.actor.add_actor(controls);
-    controls.reactive = true;
-    controls.track_hover = true;
-    controls.connect('notify::hover', Lang.bind(wD, wD._onControlsHoverChanged));
+    // 1) override scroll event. Due to us taking control of
+    //  actionMoveWorkspace(Up|Down) we don't have to modify wD._onScrollEvent
+    //  ourselves; instead, we just add another listener and deal with
+    //  left/right directions.
+    let wD = Main.overview._workspacesDisplay,
+        controls = wD._controls;
+
     onScrollId = controls.connect('scroll-event',
         Lang.bind(wD, function (actor, event) {
-            switch (event.get_scroll_direction()) {
-            case Clutter.ScrollDirection.UP:
-                moveWorkspace(UP, settings.get_boolean(KEY_WRAPAROUND));
-                break;
-            case Clutter.ScrollDirection.DOWN:
-                moveWorkspace(DOWN, settings.get_boolean(KEY_WRAPAROUND));
-                break;
+            if (!this.actor.mapped)
+                return false;
+            switch ( event.get_scroll_direction() ) {
             case Clutter.ScrollDirection.LEFT:
-                moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
-                break;
+                Main.wm.actionMoveWorkspaceLeft();
+                return true;
             case Clutter.ScrollDirection.RIGHT:
-                moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
-                break;
+                Main.wm.actionMoveWorkspaceRight();
+                return true;
             }
+            return false;
         }));
 
     // 2. Replace workspacesDisplay._thumbnailsBox with my own.
