@@ -41,7 +41,7 @@ Let me know of similar extensions to add to this list.
 
 # Installation
 
-Hopefully, this will make it onto extensions.gnome.org.
+Available from [extensions.gnome.org](https://extensions.gnome.org/extension/484/workspace-grid/)
 
 Otherwise:
 
@@ -153,11 +153,9 @@ extension overrides are:
 
 * The 'gnome3.2' branch is only compatible with GNOME 3.2. It's meant to be stable.
 * The 'gnome3.4' branch is only compatible with GNOME 3.4 - things like keybinding names have changed since GNOME 3.2. It's meant to be stable.
-* The 'default' branch is meant to be where development occurs. Push from this to the `gnome3.2` and `gnome3.4` branches.
-
-Usually my `default` branch will run on both GNOME 3.2 and GNOME 3.4 to let me develop in both shells simultaneously (I switch a lot between a GNOME 3.2 and GNOME 3.4 computer), but in this case the GNOME 3.2 and 3.4 code is incompatible between versions. 
-
-So at the moment (20/Aug/2011) the `default` branch is a GNOME 3.2 development branch, and I'll probably make a `gnome3.4-dev` branch for GNOME 3.4 development. I don't know - it's all a bit confusing :( If you have suggestions re repository structure please let me know! (For example: `default` branch is where `metadata.json`, `Readme.md` and common files have changes made to them, push these out to a `gnome3.2-dev` and `gnome3.4-dev` branch, and `gnome3.2-dev` pushes to `gnome3.2` and `gnome3.4-dev` pushes to `gnome3.4`?? How do other people do this sort of thing?)
+* The 'gnome3.6' branch is only compatible with GNOME 3.6. It's mant to be stable.
+* The 'gnome3.8' branch is only compatible with GNOME 3.8. It's mant to be stable [16/05/2013: not yet working]
+* The 'default' branch is currently essentially the 3.2 branch...
 
 ## Known issues
 From GNOME 3.4+ to keep workspaces static we can just adjust some settings:
@@ -165,4 +163,4 @@ From GNOME 3.4+ to keep workspaces static we can just adjust some settings:
 * `org.gnome.shell.overrides.dynamic-workspaces` to `false`
 * `org.gnome.desktop.wm.preferences.num-workspaces` to the number of workspaces
 
-However then you can't drag/drop applications between workspaces (GNOME 3.4.1 anyway), so instead of doing that we make use of the Frippery Static Workspace code.
+However then you can't drag/drop applications between workspaces (GNOME 3.4/3.6 anyway), so instead of doing that we make use of the Frippery Static Workspace code.
