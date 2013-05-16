@@ -94,6 +94,15 @@ const WORKSPACE_CONFIGURATION = {
 // when navigating workspaces do you want to wrap around from the start to the
 // end?
 const WRAPAROUND = false;
+// *IF* the above is 'true', when we wrap around, do you wish to wrap to/from
+// the *same* row/column, or to the next one?
+// E.g. if we had 2 rows and 2 columns and we tried to move to the workspace
+//      right of the top-right corner (row 1 column 2)  and WRAPAROUND set to true:
+// * with WRAP_TO_SAME as `true`, we wrap to row 1 column 1 (i.e. wrap around,
+//   but to the same row)
+// * with WRAP_TO_SAME as `false`, w wrap to row *2* column 1 (i.e. wrap around,
+//   but to the *next* row).
+const WRAP_TO_SAME = true;
 
 // In the overview the workspace thumbnail sidebar can get pretty wide if you
 // have multiple columns of workspaces.
