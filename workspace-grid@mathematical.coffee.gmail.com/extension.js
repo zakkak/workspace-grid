@@ -143,7 +143,6 @@ const WMProto = WindowManager.WindowManager.prototype;
 /* storage for the extension */
 let staticWorkspaceStorage = {};
 let wmStorage = {};
-let wvStorage = {};
 let nWorkspaces;
 let workspaceSwitcherPopup = null;
 let globalKeyPressHandler = null;
