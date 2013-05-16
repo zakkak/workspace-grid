@@ -133,12 +133,6 @@ const UP = Meta.MotionDirection.UP;
 const DOWN = Meta.MotionDirection.DOWN;
 const LEFT = Meta.MotionDirection.LEFT;
 const RIGHT = Meta.MotionDirection.RIGHT;
-const Keybindings = {
-    UP: 'switch-to-workspace-up',
-    DOWN: 'switch-to-workspace-down',
-    LEFT: 'switch-to-workspace-left',
-    RIGHT: 'switch-to-workspace-right'
-};
 const BindingToDirection = {
     'switch-to-workspace-up': UP,
     'switch-to-workspace-down': DOWN,
@@ -216,51 +210,36 @@ function getWorkspaceSwitcherPopup() {
 
 // calculates the workspace index in that direction.
 function calculateWorkspace(direction, wraparound, wrapToSame) {
-    let from = global.screen.get_active_workspace_index(),
-        [row, col] = indexToRowCol(from),
-        to;
+    let from = global.screen.get_active_workspace(),
+        to = from.get_neighbor(direction).index();
 
+    if (!wraparound || from.index() !== to) {
+        return to;
+    }
+
+    // otherwise, wraparound is TRUE and from === to (we are at the edge)
+    let [row, col] = indexToRowCol(from.index());
     switch (direction) {
-    case LEFT:
-        if (col === 0) {
-            if (wraparound) {
-                col = global.screen.workspace_grid.columns - 1;
-                if (!wrapToSame) row--;
-            }
-        } else {
-            col--;
-        }
-        break;
-    case RIGHT:
-        if (col === global.screen.workspace_grid.columns - 1) {
-            if (wraparound) {
-                col = 0;
-                if (!wrapToSame) row++;
-            }
-        } else {
-            col++;
-        }
-        break;
-    case UP:
-        if (row === 0) {
-            if (wraparound) {
-                row = global.screen.workspace_grid.rows - 1;
-                if (!wrapToSame) col--;
-            }
-        } else {
-            row--;
-        }
-        break;
-    case DOWN:
-        if (row === global.screen.workspace_grid.rows - 1) {
-            if (wraparound) {
-                row = 0;
-                if (!wrapToSame) col++;
-            }
-        } else {
-            row++;
-        }
-        break;
+        case LEFT:
+            // we must be at the start of the row. go to the end of the row.
+            col = global.screen.workspace_grid.columns - 1;
+            if (!wrapToSame) row--;
+            break;
+        case RIGHT:
+            // we must be at the end of the row. go to the start of the same row.
+            col = 0;
+            if (!wrapToSame) row++;
+            break;
+        case UP:
+            // we must be at the top of the col. go to the bottom of the same col.
+            row = global.screen.workspace_grid.rows - 1;
+            if (!wrapToSame) col--;
+            break;
+        case DOWN:
+            // we must be at the bottom of the col. go to the top of the same col.
+            row = 0;
+            if (!wrapToSame) col++;
+            break;
     }
     if (col < 0 || row < 0) {
         to = global.screen.n_workspaces - 1;
@@ -284,15 +263,8 @@ function calculateWorkspace(direction, wraparound, wrapToSame) {
  * - (other extensions, e.g. navigate with up/down arrows:
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
-function moveWorkspace(direction, wraparound, wrapToSame) {
-    let from = global.screen.get_active_workspace_index(),
-    to = calculateWorkspace(direction, wraparound, wrapToSame);
-
-    //log('moving from workspace %d to %d'.format(from, to));
-    if (to !== from) {
-        global.screen.get_workspace_by_index(to).activate(
-                global.get_current_time());
-    }
+function moveWorkspace(direction) {
+    Main.wm.actionMoveWorkspace(direction);
 
     // show workspace switcher
     if (!Main.overview.visible) {
@@ -494,15 +466,10 @@ function overrideKeybindingsAndPopup() {
     // note - we could simply replace Main.wm._workspaceSwitcherPopup and
     // not bother with taking over the keybindings, if not for the 'wraparound'
     // stuff.
-    Meta.keybindings_set_custom_handler(Keybindings.LEFT, showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler(Keybindings.RIGHT, showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler(Keybindings.UP, showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler(Keybindings.DOWN, showWorkspaceSwitcher);
-    // added for 3.6 @@
-    Meta.keybindings_set_custom_handler('move-to-workspace-left', showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler('move-to-workspace-right', showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler('move-to-workspace-up', showWorkspaceSwitcher);
-    Meta.keybindings_set_custom_handler('move-to-workspace-down', showWorkspaceSwitcher);
+    let bindings = Object.keys(BindingToDirection);
+    for (let i = 0; i < bindings.length; ++i) {
+        Meta.keybindings_set_custom_handler(bindings[i], showWorkspaceSwitcher);
+    }
 
     // make sure our keybindings work when (e.g.) overview is open too.
     // For some reason in 3.6 it appears this doesn't affect the callback,
@@ -537,15 +504,16 @@ function overrideKeybindingsAndPopup() {
             if (!Main.sessionMode.hasWorkspaces) {
                 return false;
             }
-            moveWorkspace(LEFT, settings.get_boolean(KEY_WRAPAROUND));
+            Main.wm.actionMoveWorkspace(Meta.MotionDirection.UP);
             return true;
         case Meta.KeyBindingAction.WORKSPACE_RIGHT:
             if (!Main.sessionMode.hasWorkspaces) {
                 return false;
             }
-            moveWorkspace(RIGHT, settings.get_boolean(KEY_WRAPAROUND));
+            Main.wm.actionMoveWorkspace(Meta.MotionDirection.RIGHT);
             return true;
         }
+        return false;
     });
 
     // Override imports.ui.windowManager.actionMove* just in case other
@@ -553,7 +521,9 @@ function overrideKeybindingsAndPopup() {
     wmStorage.actionMoveWorkspace = WMProto.actionMoveWorkspace;
     WMProto.actionMoveWorkspace = function (direction) {
         let from = global.screen.get_active_workspace_index(),
-            to = calculateWorkspace(direction, settings.get_boolean(KEY_WRAPAROUND)),
+            to = calculateWorkspace(direction,
+                    settings.get_boolean(KEY_WRAPAROUND),
+                    settings.get_boolean(KEY_WRAP_TO_SAME)),
             ws = global.screen.get_workspace_by_index(to);
 
         if (to !== from) {
@@ -564,7 +534,8 @@ function overrideKeybindingsAndPopup() {
     wmStorage.actionMoveWindow = WMProto.actionMoveWindow;
     WMProto.actionMoveWindow = function (window, direction) {
         let to = calculateWorkspace(direction,
-                settings.get_boolean(KEY_WRAPAROUND)),
+                settings.get_boolean(KEY_WRAPAROUND),
+                settings.get_boolean(KEY_WRAP_TO_SAME)),
             ws = global.screen.get_workspace_by_index(to);
 
         if (to !== global.screen.get_active_workspace_index()) {
@@ -579,26 +550,11 @@ function overrideKeybindingsAndPopup() {
 
 /* Restore the original keybindings */
 function unoverrideKeybindingsAndPopup() {
-    // Restore t
-    Meta.keybindings_set_custom_handler(Keybindings.LEFT, Lang.bind(Main.wm,
-                Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler(Keybindings.RIGHT, Lang.bind(Main.wm,
-                Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler(Keybindings.UP, Lang.bind(Main.wm,
-                Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler(Keybindings.DOWN, Lang.bind(Main.wm,
-                Main.wm._showWorkspaceSwitcher));
-    // added for 3.6 @@
-    Meta.keybindings_set_custom_handler('move-to-workspace-left', Lang.bind(Main.wm,
-                Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler('move-to-workspace-right', Lang.bind(Main.wm,
-                Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler('move-to-workspace-up', Lang.bind(Main.wm,
-                Main.wm._showWorkspaceSwitcher));
-    Meta.keybindings_set_custom_handler('move-to-workspace-down', Lang.bind(Main.wm,
-                Main.wm._showWorkspaceSwitcher));
-
-    //Main._globalKeyPressHandler = globalKeyPressHandler;
+    let bindings = Object.keys(BindingToDirection);
+    for (let i = 0; i < bindings.length; ++i) {
+        Meta.keybindings_set_custom_handler(bindings[i],
+                Lang.bind(Main.wm, Main.wm._showWorkspaceSwitcher));
+    }
 
     _workspaceSwitcherPopup = null;
 
@@ -1158,19 +1114,19 @@ function overrideWorkspaceDisplay() {
     //  actionMoveWorkspace(Up|Down) we don't have to modify wD._onScrollEvent
     //  ourselves; instead, we just add another listener and deal with
     //  left/right directions.
-    let wD = Main.overview._workspacesDisplay,
+    let wD = _getWorkspaceDisplay(),
         controls = wD._controls;
 
     onScrollId = controls.connect('scroll-event',
         Lang.bind(wD, function (actor, event) {
             if (!this.actor.mapped)
                 return false;
-            switch ( event.get_scroll_direction() ) {
+            switch (event.get_scroll_direction()) {
             case Clutter.ScrollDirection.LEFT:
-                Main.wm.actionMoveWorkspaceLeft();
+                Main.wm.actionMoveWorkspace(LEFT);
                 return true;
             case Clutter.ScrollDirection.RIGHT:
-                Main.wm.actionMoveWorkspaceRight();
+                Main.wm.actionMoveWorkspace(RIGHT);
                 return true;
             }
             return false;
@@ -1378,7 +1334,6 @@ function enable() {
     // doesn't do anything), but takes affect *after* my `modifyNumWorkspaces`
     // call, killing all the extra workspaces I just added...
     // So we wait a little bit before caling.
-    //modifyNumWorkspaces();
     Mainloop.idle_add(modifyNumWorkspaces);
 
     // Connect settings change: the only one we have to monitor is cols/rows
