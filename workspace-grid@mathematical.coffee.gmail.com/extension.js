@@ -93,7 +93,7 @@ const WORKSPACE_CONFIGURATION = {
 
 // when navigating workspaces do you want to wrap around from the start to the
 // end?
-const WRAPAROUND = false;
+const WRAPAROUND = true;
 // *IF* the above is 'true', when we wrap around, do you wish to wrap to/from
 // the *same* row/column, or to the next one?
 // E.g. if we had 2 rows and 2 columns and we tried to move to the workspace
@@ -102,7 +102,7 @@ const WRAPAROUND = false;
 //   but to the same row)
 // * with WRAP_TO_SAME as `false`, w wrap to row *2* column 1 (i.e. wrap around,
 //   but to the *next* row).
-const WRAP_TO_SAME = true;
+const WRAP_TO_SAME = false;
 
 // In the overview the workspace thumbnail sidebar can get pretty wide if you
 // have multiple columns of workspaces.
@@ -196,54 +196,63 @@ function rowColToIndex(row, col) {
  * - (other extensions, e.g. navigate with up/down arrows:
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
-function moveWorkspace(direction, wraparound) {
+function moveWorkspace(direction, wraparound, wrapToSame) {
     let from = global.screen.get_active_workspace_index(),
         [row, col] = indexToRowCol(from),
         to;
 
     switch (direction) {
     case LEFT:
-        col = Math.max(0, col - 1);
+        if (col === 0) {
+            if (WRAPAROUND) {
+                col = global.screen.workspace_grid.columns - 1;
+                if (!wrapToSame) row--;
+            }
+        } else {
+            col--;
+        }
         break;
     case RIGHT:
-        col = Math.min(global.screen.workspace_grid.columns - 1, col + 1);
+        if (col === global.screen.workspace_grid.columns - 1) {
+            if (WRAPAROUND) {
+                col = 0;
+                if (!wrapToSame) row++;
+            }
+        } else {
+            col++;
+        }
         break;
     case UP:
-        row = Math.max(0, row - 1);
+        if (row === 0) {
+            if (WRAPAROUND) {
+                row = global.screen.workspace_grid.rows - 1;
+                if (!wrapToSame) col--;
+            }
+        } else {
+            row--;
+        }
         break;
     case DOWN:
-        row = Math.min(global.screen.workspace_grid.rows - 1, row + 1);
+        if (row === global.screen.workspace_grid.rows - 1) {
+            if (WRAPAROUND) {
+                row = 0;
+                if (!wrapToSame) col++;
+            }
+        } else {
+            row++;
+        }
         break;
     }
-    to = rowColToIndex(row, col);
-    if (to < 0) { // if we tried to move to a workspace after MAX_WORKSPACES
-        to = (wraparound ? 0 : from);
-    } else if (to === from && wraparound) {
-        // depends on the direction of scroll.
-        if (to === 0) {
-            to = global.screen.n_workspaces - 1;
-        } else if (to === global.screen.n_workspaces - 1) {
-            to = 0;
-        } else if (direction === LEFT) {
-            // if to === from, we must be at the start of the row.
-            // Go to the end of the previous row.
-            to -= 1;
-        } else if (direction === RIGHT) {
-            // if to === from, we must be at the start of the row.
-            // Go to the start of the next row.
-            to += 1;
-        } else if (direction === UP) {
-            // if to === from, we must be at the start of the column.
-            // Go to the end of the previous column.
-            to = rowColToIndex(global.screen.workspace_grid.rows - 1, col - 1);
-        } else if (direction === DOWN) {
-            // if to === from, we must be at the end of the column.
-            // Go to the start of the next column.
-            to = rowColToIndex(0, col + 1);
-        }
+    if (col < 0 || row < 0) {
+        to = global.screen.n_workspaces - 1;
+    } else if (col > global.screen.workspace_grid.columns - 1 ||
+               row > global.screen.workspace_grid.rows - 1) {
+        to = 0;
+    } else {
+        to = rowColToIndex(row, col);
     }
 
-    //log('moving from workspace %d to %d'.format(from, to));
+    // log('moving from workspace %d to %d'.format(from, to));
     if (to !== from) {
         global.screen.get_workspace_by_index(to).activate(
                 global.get_current_time());
@@ -413,7 +422,7 @@ function showWorkspaceSwitcher(shellwm, binding, mask, window, backwards) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    moveWorkspace(binding, WRAPAROUND);
+    moveWorkspace(binding, WRAPAROUND, WRAP_TO_SAME);
 }
 
 /******************
@@ -448,16 +457,16 @@ function overrideKeybindingsAndPopup() {
 
         switch (action) {
         case Meta.KeyBindingAction.WORKSPACE_LEFT:
-            moveWorkspace(LEFT, WRAPAROUND);
+            moveWorkspace(LEFT, WRAPAROUND, WRAP_TO_SAME);
             return true;
         case Meta.KeyBindingAction.WORKSPACE_RIGHT:
-            moveWorkspace(RIGHT, WRAPAROUND);
+            moveWorkspace(RIGHT, WRAPAROUND, WRAP_TO_SAME);
             return true;
         case Meta.KeyBindingAction.WORKSPACE_UP:
-            moveWorkspace(UP, WRAPAROUND);
+            moveWorkspace(UP, WRAPAROUND, WRAP_TO_SAME);
             return true;
         case Meta.KeyBindingAction.WORKSPACE_DOWN:
-            moveWorkspace(DOWN, WRAPAROUND);
+            moveWorkspace(DOWN, WRAPAROUND, WRAP_TO_SAME);
             return true;
         }
         return globalKeyPressHandler(actor, event);
@@ -467,19 +476,19 @@ function overrideKeybindingsAndPopup() {
     // extensions use them.
     wmStorage.actionMoveWorkspaceUp = WMProto.actionMoveWorkspaceUp;
     WMProto.actionMoveWorkspaceUp = function () {
-        moveWorkspace(UP, WRAPAROUND);
+        moveWorkspace(UP, WRAPAROUND, WRAP_TO_SAME);
     };
     wmStorage.actionMoveWorkspaceDown = WMProto.actionMoveWorkspaceDown;
     WMProto.actionMoveWorkspaceDown = function () {
-        moveWorkspace(DOWN, WRAPAROUND);
+        moveWorkspace(DOWN, WRAPAROUND, WRAP_TO_SAME);
     };
     wmStorage.actionMoveWorkspaceLeft = WMProto.actionMoveWorkspaceLeft;
     WMProto.actionMoveWorkspaceLeft = function () {
-        moveWorkspace(LEFT, WRAPAROUND);
+        moveWorkspace(LEFT, WRAPAROUND, WRAP_TO_SAME);
     };
     wmStorage.actionMoveWorkspaceRight = WMProto.actionMoveWorkspaceRight;
     WMProto.actionMoveWorkspaceRight = function () {
-        moveWorkspace(RIGHT, WRAPAROUND);
+        moveWorkspace(RIGHT, WRAPAROUND, WRAP_TO_SAME);
     };
 }
 
