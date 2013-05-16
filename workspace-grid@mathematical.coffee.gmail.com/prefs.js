@@ -21,6 +21,7 @@ const Convenience = Me.imports.convenience;
 const KEY_ROWS = 'num-rows';
 const KEY_COLS = 'num-columns';
 const KEY_WRAPAROUND = 'wraparound';
+const KEY_WRAP_TO_SAME = 'wrap-to-same';
 const KEY_MAX_HFRACTION = 'max-screen-fraction';
 const KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
 const KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
@@ -64,8 +65,14 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this.addSpin(_("Number of columns of workspaces:"), KEY_COLS, true,
             1, 36, 1);
     
-        this.addBoolean(_("Wraparound workspaces when navigating?"),
+        let toggle = this.addBoolean(_("Wraparound workspaces when navigating?"),
             KEY_WRAPAROUND);
+        this._sameRowCol = this.addBoolean(
+            _(" ... and wrap to the same row/col (as opposed to the next/previous)?"),
+            KEY_WRAP_TO_SAME);
+        toggle.connect('notify::active', Lang.bind(this, function(widget) {
+            this._sameRowCol.set_sensitive(widget.active);
+        }));
 
         this.addBoolean(_("Show workspace labels in the switcher?"),
             KEY_SHOW_WORKSPACE_LABELS);
@@ -87,7 +94,7 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
     addBoolean: function (text, key) {
         let item = new Gtk.Switch({active: this._settings.get_boolean(key)});
         this._settings.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
-        this.addRow(text, item);
+        return this.addRow(text, item);
     },
 
     addRow: function (text, widget, wrap) {
@@ -100,6 +107,7 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this.attach(label, 0, this._rownum, 1, 1); // col, row, colspan, rowspan
         this.attach(widget, 1, this._rownum, 1, 1);
         this._rownum++;
+        return widget;
     },
 
     addSpin: function (text, key, is_int, lower, upper, increment) {

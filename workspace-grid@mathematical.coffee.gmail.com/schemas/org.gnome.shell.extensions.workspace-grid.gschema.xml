@@ -18,6 +18,11 @@
       <summary>Whether to wrap around when navigating workspaces.</summary>
       <description>Whether to wrap from (say) the end of the row back to the front of the row when navigating workspaces (e.g. with the keybindings)</description>
     </key>
+    <key type="b" name="wrap-to-same">
+      <default>false</default>
+      <summary>Whether to wrap to the *same* row/col or the next/previous one if wraparound is enabled.</summary>
+      <description>If the wraparound setting is enabled, should we wrap to the *same* row/col or the next/previous row/col when we wrap? E.g. if we are trying to navigate right from the top-right-most workspace, do we wrap the the leftmost workspace on the same row, or the leftmost workspace on the next row?</description>
+    </key>
     <key type="b" name="show-workspace-labels">
       <default>true</default>
       <summary>Whether to show workspace names in the workspace switcher popup</summary>
