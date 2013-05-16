@@ -93,7 +93,7 @@ const WORKSPACE_CONFIGURATION = {
 
 // when navigating workspaces do you want to wrap around from the start to the
 // end?
-const WRAPAROUND = true;
+const WRAPAROUND = false;
 
 // In the overview the workspace thumbnail sidebar can get pretty wide if you
 // have multiple columns of workspaces.
@@ -143,6 +143,7 @@ const WMProto = WindowManager.WindowManager.prototype;
 /* storage for the extension */
 let staticWorkspaceStorage = {};
 let wmStorage = {};
+let wvStorage = {};
 let nWorkspaces;
 let workspaceSwitcherPopup = null;
 let globalKeyPressHandler = null;
@@ -781,39 +782,26 @@ function refreshThumbnailsBox() {
  *    override ._getPreferredHeight etc that are passed in as *callbacks*).
  */
 function overrideWorkspaceDisplay() {
-    // 1) override scroll event. Note we can't just overwrite
-    // .prototype._onScrollEvent because somehow by then the old _onScrollEvent
-    // is already bound to the 'scroll-event' signal.
-    // We'll have to destroy controls and re-create it (because it doesn't even
-    // have .disconnectAll()!)
-    // The following mirrors _init in WorkspacesDisplay.
-    let wD = Main.overview._workspacesDisplay;
-    let controls = wD._controls = new St.Bin({
-        style_class: 'workspace-controls',
-        request_mode: Clutter.RequestMode.WIDTH_FOR_HEIGHT,
-        y_align: St.Align.START,
-        y_fill: true
-    });
-    wD.actor.add_actor(controls);
-    controls.reactive = true;
-    controls.track_hover = true;
-    controls.connect('notify::hover', Lang.bind(wD, wD._onControlsHoverChanged));
+    // 1) override scroll event. Due to us taking control of
+    //  actionMoveWorkspace(Up|Down) we don't have to modify wD._onScrollEvent
+    //  ourselves; instead, we just add another listener and deal with
+    //  left/right directions.
+    let wD = Main.overview._workspacesDisplay,
+        controls = wD._controls;
+
     onScrollId = controls.connect('scroll-event',
         Lang.bind(wD, function (actor, event) {
-            switch (event.get_scroll_direction()) {
-            case Clutter.ScrollDirection.UP:
-                moveWorkspace(UP, WRAPAROUND);
-                break;
-            case Clutter.ScrollDirection.DOWN:
-                moveWorkspace(DOWN, WRAPAROUND);
-                break;
+            if (!this.actor.mapped)
+                return false;
+            switch ( event.get_scroll_direction() ) {
             case Clutter.ScrollDirection.LEFT:
-                moveWorkspace(LEFT, WRAPAROUND);
-                break;
+                Main.wm.actionMoveWorkspaceLeft();
+                return true;
             case Clutter.ScrollDirection.RIGHT:
-                moveWorkspace(RIGHT, WRAPAROUND);
-                break;
+                Main.wm.actionMoveWorkspaceRight();
+                return true;
             }
+            return false;
         }));
 
     // 2. Replace workspacesDisplay._thumbnailsBox with my own.
@@ -835,7 +823,6 @@ function unoverrideWorkspaceDisplay() {
         wD._controls.disconnect(onScrollId);
         onScrollId = 0;
     }
-    wD._controls.connect('scroll-event', Lang.bind(wD, wD._onScrollEvent));
 
     // replace the ThumbnailsBox with the original one
     thumbnailsBox.destroy();
