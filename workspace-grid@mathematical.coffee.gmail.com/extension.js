@@ -122,6 +122,7 @@ const St = imports.gi.St;
 
 const DND = imports.ui.dnd;
 const Main = imports.ui.main;
+const OverviewControls = imports.ui.overviewControls;
 const Tweener = imports.ui.tweener;
 const WindowManager = imports.ui.windowManager;
 const WorkspaceSwitcher = imports.ui.workspaceSwitcherPopup;
@@ -572,6 +573,8 @@ const ThumbnailsBox = new Lang.Class({
     /* when the user clicks on a thumbnail take into account the x position
      * of that thumbnail as well as the y to determine which was clicked */
     _onButtonRelease: function (actor, event) {
+        // @@
+        log("BUTTON RELEASE");
         let [stageX, stageY] = event.get_coords();
         let [r, x, y] = this.actor.transform_stage_point(stageX, stageY);
 
@@ -581,7 +584,21 @@ const ThumbnailsBox = new Lang.Class({
             // add in the x criteria
             if (y >= thumbnail.actor.y && y <= thumbnail.actor.y + h &&
                     x >= thumbnail.actor.x && x <= thumbnail.actor.x + w) {
-                thumbnail.activate(event.get_time());
+                log(" f");
+                log(this._indicator.mapped); // true...
+                thumbnail.activate(event.get_time()); // <- SEGFAULT HERE
+		// WORKED IT OUT: the old thumbnailsbox is not properly dead-  activeWorkspaceChanged
+		//  is still triggering on the *old* one which I destroyed (i thought!!!)
+                // TODO UPTO
+                // OK the above calls this.metaWorkspace.activate() and it is this that
+                // causes the segfault
+                // i think some sort of allocate call is being made as the
+                // slider hides which calls perhaps _redraw which is causing it.
+                // NOPE it's not from _allocate (I think)
+
+                // st_widget_get_theme_node called on widget which is not on the stage
+                // it is the _indicator that appears to trigger this. Even though it is mapped.
+                log(" g");
                 break;
             }
         }
@@ -712,6 +729,7 @@ const ThumbnailsBox = new Lang.Class({
 
     /* stuff to do with the indicator around the current workspace */
     set indicatorX(indicatorX) {
+        log('set indicatorX');
         this._indicatorX = indicatorX;
         //this.actor.queue_relayout(); // <-- we only ever change indicatorX
         // when we change indicatorY and that already causes a queue_relayout
@@ -719,10 +737,12 @@ const ThumbnailsBox = new Lang.Class({
     },
 
     get indicatorX() {
+        log('get indicatorX');
         return this._indicatorX;
     },
 
     _activeWorkspaceChanged: function () {
+        log('activeworkspacechanged');
         let thumbnail;
         let activeWorkspace = global.screen.get_active_workspace();
         for (let i = 0; i < this._thumbnails.length; i++) {
@@ -815,9 +835,11 @@ const ThumbnailsBox = new Lang.Class({
     },
 
     _allocate: function (actor, box, flags) {
+        log('_allocate');
         if (this._thumbnails.length === 0) // not visible
             return;
 
+        log('_allocate 2');
         let rtl = (Clutter.get_default_text_direction() ===
                 Clutter.TextDirection.RTL),
         // See comment about this._background in _init()
@@ -1061,17 +1083,44 @@ function overrideWorkspaceDisplay() {
      which makes an OverviewControls.ThumbnailsSlider for it (before it was managed
      by the WorkspacesDisplay).
     I have to work out how these work.
+*/
 
     // GNOME 3.8: ThumbnailsBox is owned by the overview/ControlsManager
-    Main.overview._thumbnailsBox.actor.unparent();
-    Main.overview._thumbnailsBox = thumbnailsBox = new ThumbnailsBox();
-    Main.overview._controls._thumbnailsSlider = new imports.ui.overviewControls.ThumbnailsSlider(thumbnailsBox);
-    Main.overview._controls.thumbnailsActor = Main.overview._controls._thumbnailsSlider.actor;
+    // OK: this sort of works. It displays in the grid format, but doesn't seem to ever collapse.
+    //  (TODO: destroy the old slider/thumbnails box?)
+    // BUT the scroll event crashes the shell
+    // ALSO clicking crashes the shell (error below):
+    // (gnome-shell:1037): St-ERROR **: st_widget_get_theme_node called on the widget
+    //   [0x90fa708 StBin.workspace-thumbnail-indicator:last-child] which is not in the stage.
+
+    let controls = Main.overview._controls,
+    thumbnailsBox = new ThumbnailsBox();
+/*
+    let slider = new OverviewControls.ThumbnailsSlider(thumbnailsBox);
+
+    Main.overview._group.remove_actor(controls.thumbnailsActor);
+    controls._thumbnailsSlider = slider;
+    controls.thumbnailsActor = slider.actor;
+    Main.overview._thumbnailsBox = thumbnailsBox;
+    Main.overview._group.add_actor(slider.actor);
+*/
+
+    // kill the old thumbnails box
+    controls.thumbnailsActor.remove_actor(Main.overview._thumbnailsBox.actor);
+    Main.overview._thumbnailsBox.actor.destroy();
+    thumbnailsBox = new ThumbnailsBox();
+    Main.overview._thumbnailsBox = thumbnailsBox;
+    controls._thumbnailsSlider._thumbnailsBox = thumbnailsBox;
+    controls.thumbnailsActor.add_actor(thumbnailsBox.actor);
+    thumbnailsBox.actor.y_expand = true;
+
+    // TODO: destroy the old ones???
+    // TODO: can I avoid replacing the thumbnailsslider?
+
     // wD._alwaysZoomOut = false;
     // error: child is null.
 
-    refreshThumbnailsBox();
-*/
+//    refreshThumbnailsBox();
 }
 
 function unoverrideWorkspaceDisplay() {
