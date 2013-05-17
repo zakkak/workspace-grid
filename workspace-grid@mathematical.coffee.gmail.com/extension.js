@@ -70,8 +70,11 @@
  * From GNOME 3.4+ to keep workspaces static we can just do:
  * - org.gnome.shell.overrides.dynamic-workspaces false
  * - org.gnome.desktop.wm.preferences.num-workspaces <numworkspaces>
- * However then you can't drag/drop applications between workspaces (GNOME 3.4.1
- * anyway)
+ * However then you can't drag/drop applications between workspaces (GNOME 3.4
+ *  and 3.6 anyway)
+ * In 3.8 you can drag/drop between workspaces with dynamic-workspace off, but you
+ *  can't drag/drop to create a *new* workspace (or at least you don't get the
+ *  animation showing that this is possible).
  *
  * Hence we make use of the Frippery Static Workspace code.
  *
@@ -97,6 +100,16 @@
  * - Directions instead of being 'switch-to-workspace-*' are now Meta.MotionDirection
  * - The workspace popup also shows for 'move-to-workspace-*' binings.
  * - actionMoveWorkspace{Up,Down} --> actionMoveWorkspace
+ *
+ * GNOME 3.6 <-> GNOME 3.8
+ * ---------
+ * - Meta.keybindings_set_custom_handler -> Main.wm.setCustomKeybindingHandler
+ *   (we've almost done a full loop back to 3.2...)
+ * - use of setCustomKeybindingHandler allows modes (normal/overview) to be
+ *    passed in, so it's no longer to override globalKeyPressHandler
+ * - calculateWorkspace can use get_neighbor() which is now exposed.
+ *   We wrap around to the *same* row/column (if KEY_WRAPAROUND is true)
+ * - no need to reconstruct workspace controls (I think)
  */
 
 ////////// CODE ///////////
@@ -157,9 +170,9 @@ const WMProto = WindowManager.WindowManager.prototype;
 /* storage for the extension */
 let staticWorkspaceStorage = {};
 let wmStorage = {};
+let wvStorage = {};
 let nWorkspaces;
 let _workspaceSwitcherPopup = null;
-//let globalKeyPressHandler = null;
 let thumbnailsBox = null;
 let onScrollId = 0;
 let settings = 0;
@@ -447,7 +460,8 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
     let direction = BindingToDirection[binding.get_name()],
         to;
     if (binding.get_name().substr(0, 5) === 'move-') {
-        to = Main.wm.actionMoveWindow(window, direction); // we've patched ths
+        // we've patched this
+        to = Main.wm.actionMoveWindow(window, direction);
     } else {
         // we've patched this
         to = Main.wm.actionMoveWorkspace(direction);
@@ -461,6 +475,7 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
 
 /******************
  * Overrides the 'switch_to_workspace_XXX' keybindings
+ * Relevant code in js/windowManager.js
  ******************/
 function overrideKeybindingsAndPopup() {
     // note - we could simply replace Main.wm._workspaceSwitcherPopup and
@@ -468,53 +483,11 @@ function overrideKeybindingsAndPopup() {
     // stuff.
     let bindings = Object.keys(BindingToDirection);
     for (let i = 0; i < bindings.length; ++i) {
-        Meta.keybindings_set_custom_handler(bindings[i], showWorkspaceSwitcher);
-    }
-
-    // make sure our keybindings work when (e.g.) overview is open too.
-    // For some reason in 3.6 it appears this doesn't affect the callback,
-    // even though it's just a global.stage.connect and not a Lang.bind and
-    // this worked in 3.2-3.4
-    // So instead of overriding we'll just add our own handler.
-    //globalKeyPressHandler = Main._globalKeyPressHandler;
-    global.stage.connect('captured-event', function (actor, event) {
-        // same as _globalKeyPressHandler
-        if (Main.modalCount === 0 ||
-                event.type() !== Clutter.EventType.KEY_PRESS) {
-            return false;
-        }
-
-        if (!Main.sessionMode.allowKeybindingsWhenModal) {
-            if (Main.modalCount > (Main.overview.visible ? 1 : 0))
-                return false;
-        }
-
-        let keyCode = event.get_key_code(),
-            ignoredModifiers = global.display.get_ignored_modifier_mask(),
-            modifierState = event.get_state() & ~ignoredModifiers,
-            action = global.display.get_keybinding_action(keyCode,
-                    modifierState);
-
-        // UP and DOWN are already handled by the original
-        // Main._globalKeyPressHandler and call actionMoveWorkspace which
-        // we've patched.
-        // We just grab RIGHT and LEFT.
-        switch (action) {
-        case Meta.KeyBindingAction.WORKSPACE_LEFT:
-            if (!Main.sessionMode.hasWorkspaces) {
-                return false;
-            }
-            Main.wm.actionMoveWorkspace(Meta.MotionDirection.UP);
-            return true;
-        case Meta.KeyBindingAction.WORKSPACE_RIGHT:
-            if (!Main.sessionMode.hasWorkspaces) {
-                return false;
-            }
-            Main.wm.actionMoveWorkspace(Meta.MotionDirection.RIGHT);
-            return true;
-        }
-        return false;
-    });
+        Main.wm.setCustomKeybindingHandler(bindings[i],
+                                           Shell.KeyBindingMode.NORMAL |
+                                           Shell.KeyBindingMode.OVERVIEW,
+                                           showWorkspaceSwitcher);
+	}
 
     // Override imports.ui.windowManager.actionMove* just in case other
     // extensions use them.
@@ -552,8 +525,11 @@ function overrideKeybindingsAndPopup() {
 function unoverrideKeybindingsAndPopup() {
     let bindings = Object.keys(BindingToDirection);
     for (let i = 0; i < bindings.length; ++i) {
-        Meta.keybindings_set_custom_handler(bindings[i],
-                Lang.bind(Main.wm, Main.wm._showWorkspaceSwitcher));
+        Main.wm.setCustomKeybindingHandler(bindings[i],
+                                               Shell.KeyBindingMode.NORMAL |
+                                               Shell.KeyBindingMode.OVERVIEW,
+                                               Lang.bind(Main.wm,
+                                                   Main.wm._showWorkspaceSwitcher));
     }
 
     _workspaceSwitcherPopup = null;
@@ -563,7 +539,7 @@ function unoverrideKeybindingsAndPopup() {
 }
 
 // GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
-// GNOME 3.6: Main.overview._viewSelector._workspacesDisplay
+// GNOME 3.6, 3.8: Main.overview._viewSelector._workspacesDisplay
 function _getWorkspaceDisplay() {
     return Main.overview._workspacesDisplay || Main.overview._viewSelector._workspacesDisplay;
 }
@@ -585,76 +561,9 @@ const ThumbnailsBox = new Lang.Class({
         // the signal IDs (it connects to Main.overview) so that we can delete
         // them properly on destroy!
 
-        //this.parent(); Equivalent to:
-        this.actor = new Shell.GenericContainer({
-            reactive: true,
-            style_class: 'workspace-thumbnails',
-            request_mode: Clutter.RequestMode.WIDTH_FOR_HEIGHT
-        });
-        this.actor.connect('get-preferred-width',
-            Lang.bind(this, this._getPreferredWidth));
-        this.actor.connect('get-preferred-height',
-                Lang.bind(this, this._getPreferredHeight));
-        this.actor.connect('allocate', Lang.bind(this, this._allocate));
-        this.actor._delegate = this;
-
-        this._background = new St.Bin({
-            style_class: 'workspace-thumbnails-background'
-        });
-
-        this.actor.add_actor(this._background);
-
-        let indicator = new St.Bin({
-            style_class: 'workspace-thumbnail-indicator'
-        });
-
-        // We don't want the indicator to affect drag-and-drop
-        Shell.util_set_hidden_from_pick(indicator, true);
-
-        this._indicator = indicator;
-        this.actor.add_actor(indicator);
-
-        this._dropWorkspace = -1;
-        this._dropPlaceholderPos = -1;
-        this._dropPlaceholder = new St.Bin({ style_class: 'placeholder' });
-        this.actor.add_actor(this._dropPlaceholder);
-
-        this._targetScale = 0;
-        this._scale = 0;
-        this._pendingScaleUpdate = false;
-        this._stateUpdateQueued = false;
-        this._animatingIndicator = false;
-        this._indicatorY = 0; // only used when _animatingIndicator is true
-
-        this._stateCounts = {};
-        for (let key in ThumbnailState) {
-            if (ThumbnailState.hasOwnProperty(key)) {
-                this._stateCounts[ThumbnailState[key]] = 0;
-            }
-        }
-
-        this._thumbnails = [];
-
-        this.actor.connect('button-press-event', function () { return true; });
-        this.actor.connect('button-release-event',
-                Lang.bind(this, this._onButtonRelease));
-
-        // Change: STORE these signals so we can disconnect on destroy.
-        this._signals = [];
-        this._signals.push(Main.overview.connect('item-drag-begin',
-              Lang.bind(this, this._onDragBegin)));
-        this._signals.push(Main.overview.connect('item-drag-end',
-              Lang.bind(this, this._onDragEnd)));
-        this._signals.push(Main.overview.connect('item-drag-cancelled',
-              Lang.bind(this, this._onDragCancelled)));
-        this._signals.push(Main.overview.connect('window-drag-begin',
-              Lang.bind(this, this._onDragBegin)));
-        this._signals.push(Main.overview.connect('window-drag-end',
-              Lang.bind(this, this._onDragEnd)));
-        this._signals.push(Main.overview.connect('window-drag-cancelled',
-              Lang.bind(this, this._onDragCancelled)));
-
-        // end this.parent()
+        // In contradiction to the comment above (no signal ids stored...)::
+        // TODO: pick one way or the other (once confirmed working)
+        this.parent();
 
         this._indicatorX = 0; // to match indicatorY
         this._dropPlaceholderHorizontal = true;
@@ -672,7 +581,7 @@ const ThumbnailsBox = new Lang.Class({
             // add in the x criteria
             if (y >= thumbnail.actor.y && y <= thumbnail.actor.y + h &&
                     x >= thumbnail.actor.x && x <= thumbnail.actor.x + w) {
-                thumbnail.activate(event.time);
+                thumbnail.activate(event.get_time());
                 break;
             }
         }
@@ -1079,11 +988,14 @@ const ThumbnailsBox = new Lang.Class({
 
     destroy: function () {
         this.actor.destroy();
+        // @@ for now
+        /*
         let i = this._signals.length;
         while (i--) {
             Main.overview.disconnect(this._signals[i]);
         }
         this._signals = [];
+        */
     }
 });
 
@@ -1098,8 +1010,9 @@ function refreshThumbnailsBox() {
     // get the thumbnailsbox to re-allocate itself
     // (TODO: for some reason the *first* overview show won't respect this but
     // subsequent ones will).
-    let wD = _getWorkspaceDisplay();
-    wD._thumbnailsBox.actor.queue_relayout();
+    //let wD = _getWorkspaceDisplay();
+    //wD._thumbnailsBox.actor.queue_relayout();
+    Main.overview._thumbnailsBox.actor.queue_relayout();
 }
 
 /**
@@ -1110,54 +1023,75 @@ function refreshThumbnailsBox() {
  *    override ._getPreferredHeight etc that are passed in as *callbacks*).
  */
 function overrideWorkspaceDisplay() {
-    // 1) override scroll event. Due to us taking control of
-    //  actionMoveWorkspace(Up|Down) we don't have to modify wD._onScrollEvent
-    //  ourselves; instead, we just add another listener and deal with
-    //  left/right directions.
-    let wD = _getWorkspaceDisplay(),
-        controls = wD._controls;
-
-    onScrollId = controls.connect('scroll-event',
-        Lang.bind(wD, function (actor, event) {
-            if (!this.actor.mapped)
+    // 1. Override the scroll event.
+    //    The _onScrollEvent function itself is quite fine, except it only allows
+    //     scrolling up and down.
+    //    For completeness I also allow scrolling left/right (though I can't test...)
+    //    Note that this is done differently in GNOME 3.8: the event is triggered
+    //     from each individual workspaces view in the workspaceDisplay rather
+    //     than from the 'controls' object.
+    wvStorage._init = WorkspacesView.WorkspacesView.prototype._init;
+    WorkspacesView.WorkspacesView.prototype._init = function () {
+        wvStorage._init.apply(this, arguments);
+        this._horizontalScroll = this.actor.connect('scroll-event',
+            Lang.bind(this, function () {
+                // same as the original, but for LEFT/RIGHT
+                if (!this.actor.mapped)
+                    return false;
+                switch (event.get_scroll_direction()) {
+                case Clutter.ScrollDirection.LEFT:
+                    Main.wm.actionMoveWorkspace(LEFT);
+                    return true;
+                case Clutter.ScrollDirection.RIGHT:
+                    Main.wm.actionMoveWorkspace(RIGHT);
+                    return true;
+                }
                 return false;
-            switch (event.get_scroll_direction()) {
-            case Clutter.ScrollDirection.LEFT:
-                Main.wm.actionMoveWorkspace(LEFT);
-                return true;
-            case Clutter.ScrollDirection.RIGHT:
-                Main.wm.actionMoveWorkspace(RIGHT);
-                return true;
-            }
-            return false;
-        }));
+            }));
+    };
 
     // 2. Replace workspacesDisplay._thumbnailsBox with my own.
     // Start with controls collapsed (since the workspace thumbnails can take
     // up quite a bit of space horizontally). This will be recalculated
     // every time the overview shows.
-    wD._thumbnailsBox.actor.unparent();
-    thumbnailsBox = wD._thumbnailsBox = new ThumbnailsBox();
-    controls.add_actor(thumbnailsBox.actor);
-    wD._alwaysZoomOut = false;
+
+/*  The ThumbnailsBox class doesn't look that different in 3.8 (although we have to do
+    something with _spliceIndex and queueUpdateStates in acceptDrop)
+    However, the thumbnails box is now managed by the new OverviewControls.ControlsManager
+     which makes an OverviewControls.ThumbnailsSlider for it (before it was managed
+     by the WorkspacesDisplay).
+    I have to work out how these work.
+
+    // GNOME 3.8: ThumbnailsBox is owned by the overview/ControlsManager
+    Main.overview._thumbnailsBox.actor.unparent();
+    Main.overview._thumbnailsBox = thumbnailsBox = new ThumbnailsBox();
+    Main.overview._controls._thumbnailsSlider = new imports.ui.overviewControls.ThumbnailsSlider(thumbnailsBox);
+    Main.overview._controls.thumbnailsActor = Main.overview._controls._thumbnailsSlider.actor;
+    // wD._alwaysZoomOut = false;
+    // error: child is null.
 
     refreshThumbnailsBox();
+*/
 }
 
 function unoverrideWorkspaceDisplay() {
     let wD = _getWorkspaceDisplay();
-    // put the original _scrollEvent back again
-    if (onScrollId) {
-        wD._controls.disconnect(onScrollId);
-        onScrollId = 0;
+
+    // undo scroll event patching
+    WorkspacesView.WorkspacesView.prototype._init = wvStorage._init;
+    for (let i = 0; i < wD._workspacesViews.length; ++i) {
+        let wV = wD._workspacesViews[i];
+        if (wV._horizontalScroll) {
+            wV.disconnect(wV._horizontalScroll);
+        }
     }
 
+/*
     // replace the ThumbnailsBox with the original one
     thumbnailsBox.destroy();
     thumbnailsBox = null;
-    let box = wD._thumbnailsBox = new WorkspaceThumbnail.ThumbnailsBox();
-    wD._controls.add_actor(box.actor);
-    wD._updateAlwaysZoom(); // undo our zoom changes.
+    // ... more
+*/
 }
 
 /******************
@@ -1169,8 +1103,8 @@ function modifyNumWorkspaces() {
         global.screen.workspace_grid.rows * global.screen.workspace_grid.columns
     );
 
-    /* NOTE: in GNOME 3.4, Meta.prefs_set_num_workspaces has *no effect*
-     * if Meta.prefs_get_dynamic_workspaces is true.
+    /* NOTE: in GNOME 3.4, 3.6, 3.8, Meta.prefs_set_num_workspaces has
+     * *no effect* if Meta.prefs_get_dynamic_workspaces is true.
      * (see mutter/src/core/screen.c prefs_changed_callback).
      * To *actually* increase/decrease the number of workspaces (to fire
      * notify::n-workspaces), we must use global.screen.append_new_workspace and
@@ -1180,9 +1114,11 @@ function modifyNumWorkspaces() {
      * but then we can't drag and drop windows between workspaces (supposedly a
      * GNOME 3.4 bug, see the Frippery Static Workspaces extension. Can confirm
      * but cannot find a relevant bug report/fix.)
+     * Can confirm the bug in 3.6 too.
+     * In 3.8 I appear to be able to drag/drop between workspace but not to
+     * drag/drop to create new workspaces (with the placeholder animation),
+     * so I'll stick to this method for now.
      */
-    // Hmm - in 3.6 this is the only way I can get it working without dynamic
-    // workspaces too.
     let newtotal = (global.screen.workspace_grid.rows *
         global.screen.workspace_grid.columns);
     if (global.screen.n_workspaces < newtotal) {
@@ -1199,7 +1135,8 @@ function modifyNumWorkspaces() {
         }
     }
 
-    // This appears to do nothing but we'll do it in case it helps.
+    // This affects workspace.get_neighbor() (only exposed in 3.8+) and appears
+    // to do not much else. We'll do it anyway just in case.
     global.screen.override_workspace_layout(
         Meta.ScreenCorner.TOPLEFT, // workspace 0
         false, // true == lay out in columns. false == lay out in rows
@@ -1339,8 +1276,8 @@ function enable() {
     // Connect settings change: the only one we have to monitor is cols/rows
     signals.push(settings.connect('changed::' + KEY_ROWS, nWorkspacesChanged));
     signals.push(settings.connect('changed::' + KEY_COLS, nWorkspacesChanged));
-    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
-    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
+//@@    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
+//@@    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
 }
 
 function nWorkspacesChanged() {
