@@ -167,14 +167,15 @@ const MAX_THUMBNAIL_SCALE = WorkspaceThumbnail.MAX_THUMBNAIL_SCALE;
 const WORKSPACE_CUT_SIZE = WorkspaceThumbnail.WORKSPACE_CUT_SIZE;
 const ThumbnailState = WorkspaceThumbnail.ThumbnailState;
 const WMProto = WindowManager.WindowManager.prototype;
+const TBProto = WorkspaceThumbnail.ThumbnailsBox.prototype;
 
 /* storage for the extension */
 let staticWorkspaceStorage = {};
 let wmStorage = {};
 let wvStorage = {};
+let tbStorage = {};
 let nWorkspaces;
 let _workspaceSwitcherPopup = null;
-let thumbnailsBox = null;
 let onScrollId = 0;
 let settings = 0;
 
@@ -573,8 +574,6 @@ const ThumbnailsBox = new Lang.Class({
     /* when the user clicks on a thumbnail take into account the x position
      * of that thumbnail as well as the y to determine which was clicked */
     _onButtonRelease: function (actor, event) {
-        // @@
-        log("BUTTON RELEASE");
         let [stageX, stageY] = event.get_coords();
         let [r, x, y] = this.actor.transform_stage_point(stageX, stageY);
 
@@ -584,21 +583,7 @@ const ThumbnailsBox = new Lang.Class({
             // add in the x criteria
             if (y >= thumbnail.actor.y && y <= thumbnail.actor.y + h &&
                     x >= thumbnail.actor.x && x <= thumbnail.actor.x + w) {
-                log(" f");
-                log(this._indicator.mapped); // true...
                 thumbnail.activate(event.get_time()); // <- SEGFAULT HERE
-		// WORKED IT OUT: the old thumbnailsbox is not properly dead-  activeWorkspaceChanged
-		//  is still triggering on the *old* one which I destroyed (i thought!!!)
-                // TODO UPTO
-                // OK the above calls this.metaWorkspace.activate() and it is this that
-                // causes the segfault
-                // i think some sort of allocate call is being made as the
-                // slider hides which calls perhaps _redraw which is causing it.
-                // NOPE it's not from _allocate (I think)
-
-                // st_widget_get_theme_node called on widget which is not on the stage
-                // it is the _indicator that appears to trigger this. Even though it is mapped.
-                log(" g");
                 break;
             }
         }
@@ -729,7 +714,6 @@ const ThumbnailsBox = new Lang.Class({
 
     /* stuff to do with the indicator around the current workspace */
     set indicatorX(indicatorX) {
-        log('set indicatorX');
         this._indicatorX = indicatorX;
         //this.actor.queue_relayout(); // <-- we only ever change indicatorX
         // when we change indicatorY and that already causes a queue_relayout
@@ -737,12 +721,10 @@ const ThumbnailsBox = new Lang.Class({
     },
 
     get indicatorX() {
-        log('get indicatorX');
         return this._indicatorX;
     },
 
     _activeWorkspaceChanged: function () {
-        log('activeworkspacechanged');
         let thumbnail;
         let activeWorkspace = global.screen.get_active_workspace();
         for (let i = 0; i < this._thumbnails.length; i++) {
@@ -835,11 +817,9 @@ const ThumbnailsBox = new Lang.Class({
     },
 
     _allocate: function (actor, box, flags) {
-        log('_allocate');
         if (this._thumbnails.length === 0) // not visible
             return;
 
-        log('_allocate 2');
         let rtl = (Clutter.get_default_text_direction() ===
                 Clutter.TextDirection.RTL),
         // See comment about this._background in _init()
@@ -1032,9 +1012,43 @@ function refreshThumbnailsBox() {
     // get the thumbnailsbox to re-allocate itself
     // (TODO: for some reason the *first* overview show won't respect this but
     // subsequent ones will).
-    //let wD = _getWorkspaceDisplay();
-    //wD._thumbnailsBox.actor.queue_relayout();
     Main.overview._thumbnailsBox.actor.queue_relayout();
+}
+
+/** Does everything in ThumbnailsBox._init to do with this.actor so that I
+ * can patch it.
+ * Use it like:
+ *
+ *     _makeNewThumbnailsBoxActor.call(whatever_is_this, ThumbnailsBox.prototype);
+ *
+ */
+function _replaceThumbnailsBoxActor (actorCallbackObject) {
+    let slider = Main.overview._controls._thumbnailsSlider,
+        thumbnailsBox = Main.overview._thumbnailsBox;
+
+    // kill the old actor
+    slider.actor.remove_actor(thumbnailsBox.actor);
+    thumbnailsBox.actor.destroy();
+
+    // make our own actor and slot it in to the existing thumbnailsBox.actor
+    (function (patch) {
+        this.actor = new Shell.GenericContainer({ reactive: true,
+                                                  style_class: 'workspace-thumbnails',
+                                                  request_mode: Clutter.RequestMode.WIDTH_FOR_HEIGHT });
+        this.actor.connect('get-preferred-width', Lang.bind(this, patch._getPreferredWidth));
+        this.actor.connect('get-preferred-height', Lang.bind(this, patch._getPreferredHeight));
+        this.actor.connect('allocate', Lang.bind(this, patch._allocate));
+        this.actor._delegate = this;
+
+        this.actor.add_actor(this._background);
+        this.actor.add_actor(this._indicator);
+        this.actor.add_actor(this._dropPlaceholder);
+
+        this.actor.connect('button-press-event', function() { return true; });
+        this.actor.connect('button-release-event', Lang.bind(this, patch._onButtonRelease));
+    }).call(thumbnailsBox, actorCallbackObject);
+
+    slider.actor.add_actor(thumbnailsBox.actor);
 }
 
 /**
@@ -1045,6 +1059,9 @@ function refreshThumbnailsBox() {
  *    override ._getPreferredHeight etc that are passed in as *callbacks*).
  */
 function overrideWorkspaceDisplay() {
+    if (Main.overview.visible) {
+        Main.overview.hide();
+    }
     // 1. Override the scroll event.
     //    The _onScrollEvent function itself is quite fine, except it only allows
     //     scrolling up and down.
@@ -1076,56 +1093,52 @@ function overrideWorkspaceDisplay() {
     // Start with controls collapsed (since the workspace thumbnails can take
     // up quite a bit of space horizontally). This will be recalculated
     // every time the overview shows.
+    // NOTE: I usually create a new instance of ThumbnailsBox() (defined above)
+    // and simply replace all references to the old thumbnailsBox with this one.
+    // However, the old one listens to various signals (like Main.overview's
+    // 'hidden' or 'showing') that modify the thumbnailsBox actor. Since these
+    // signals' IDs are not stored by gnome-shell, I can't disconnect them
+    // properly, and when the signals fire they attempt to modify the now
+    // non-existent/non-mapped actor, causing segfaults.
 
-/*  The ThumbnailsBox class doesn't look that different in 3.8 (although we have to do
-    something with _spliceIndex and queueUpdateStates in acceptDrop)
-    However, the thumbnails box is now managed by the new OverviewControls.ControlsManager
-     which makes an OverviewControls.ThumbnailsSlider for it (before it was managed
-     by the WorkspacesDisplay).
-    I have to work out how these work.
-*/
+    // I will submit a patch for this against gnome-shell
+    // (note to self: see https://git.gnome.org/browse/gnome-shell/commit/?id=ee4f199a9ff9f302d01393c9b6b79a0a1680db8f
+    //  for how it's done), but in the meantime:
+    // The only way I know how to get around it is to *leave*
+    // Main.overview._thumbnailsBox as-is, but *replace* its actor with my own
+    // (connected to my own _getPreferred(Width|Height) and _allocate callbacks).
+    //
+    // It's really really ugly, but it is a workaround and it works until
+    // I submit my patch and it eventually makes it into gnome-shell.
 
-    // GNOME 3.8: ThumbnailsBox is owned by the overview/ControlsManager
-    // OK: this sort of works. It displays in the grid format, but doesn't seem to ever collapse.
-    //  (TODO: destroy the old slider/thumbnails box?)
-    // BUT the scroll event crashes the shell
-    // ALSO clicking crashes the shell (error below):
-    // (gnome-shell:1037): St-ERROR **: st_widget_get_theme_node called on the widget
-    //   [0x90fa708 StBin.workspace-thumbnail-indicator:last-child] which is not in the stage.
+    // replace thumbnailsBox.actor with a new one
+    let MyTBProto = ThumbnailsBox.prototype,
+        thumbnailsBox = Main.overview._thumbnailsBox;
 
-    let controls = Main.overview._controls,
-    thumbnailsBox = new ThumbnailsBox();
-/*
-    let slider = new OverviewControls.ThumbnailsSlider(thumbnailsBox);
+    _replaceThumbnailsBoxActor(MyTBProto);
 
-    Main.overview._group.remove_actor(controls.thumbnailsActor);
-    controls._thumbnailsSlider = slider;
-    controls.thumbnailsActor = slider.actor;
-    Main.overview._thumbnailsBox = thumbnailsBox;
-    Main.overview._group.add_actor(slider.actor);
-*/
+    // add in the properties/functions I want.
+    thumbnailsBox._indicatorX = 0;
+    thumbnailsBox._dropPlaceholderHorizontal = true;
 
-    // kill the old thumbnails box
-    controls.thumbnailsActor.remove_actor(Main.overview._thumbnailsBox.actor);
-    Main.overview._thumbnailsBox.actor.destroy();
-    thumbnailsBox = new ThumbnailsBox();
-    Main.overview._thumbnailsBox = thumbnailsBox;
-    controls._thumbnailsSlider._thumbnailsBox = thumbnailsBox;
-    controls.thumbnailsActor.add_actor(thumbnailsBox.actor);
-    thumbnailsBox.actor.y_expand = true;
+    tbStorage.handleDragover = TBProto.handleDragover;
+    tbStorage._activeWorkspaceChanged = TBProto._activeWorkspaceChanged;
 
-    // TODO: destroy the old ones???
-    // TODO: can I avoid replacing the thumbnailsslider?
+    TBProto.handleDragover = MyTBProto.handleDragover;
+    TBProto._activeWorkspaceChanged = MyTBProto._activeWorkspaceChanged;
+    TBProto.__defineGetter__('indicatorX', MyTBProto.__lookupGetter__('indicatorX'));
+    TBProto.__defineSetter__('indicatorX', MyTBProto.__lookupSetter__('indicatorX'));
 
-    // wD._alwaysZoomOut = false;
-    // error: child is null.
-
-//    refreshThumbnailsBox();
+    // finally refresh the box.
+    refreshThumbnailsBox();
 }
 
 function unoverrideWorkspaceDisplay() {
-    let wD = _getWorkspaceDisplay();
+    if (Main.overview.visible) {
+        Main.overview.hide();
+    }
 
+    let wD = _getWorkspaceDisplay();
     // undo scroll event patching
     WorkspacesView.WorkspacesView.prototype._init = wvStorage._init;
     for (let i = 0; i < wD._workspacesViews.length; ++i) {
@@ -1135,12 +1148,14 @@ function unoverrideWorkspaceDisplay() {
         }
     }
 
-/*
-    // replace the ThumbnailsBox with the original one
-    thumbnailsBox.destroy();
-    thumbnailsBox = null;
-    // ... more
-*/
+    // 2. replace the thumbnails box actor
+    // restore functions
+    TBProto.handleDragOver = tbStorage.handleDragover;
+    TBProto._activeWorkspaceChanged = tbStorage._activeWorkspaceChanged;
+    delete x.indicatorX; // remove the getter/setter
+    // replace the actor
+    _replaceThumbnailsBoxActor(TBProto);
+    refreshThumbnailsBox();
 }
 
 /******************
@@ -1325,8 +1340,8 @@ function enable() {
     // Connect settings change: the only one we have to monitor is cols/rows
     signals.push(settings.connect('changed::' + KEY_ROWS, nWorkspacesChanged));
     signals.push(settings.connect('changed::' + KEY_COLS, nWorkspacesChanged));
-//@@    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
-//@@    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
+    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
+    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
 }
 
 function nWorkspacesChanged() {
