@@ -832,7 +832,7 @@ const ThumbnailsBox = new Lang.Class({
      **/
     _getPreferredHeight: function (actor, forWidth, alloc) {
         let themeNode = this._background.get_theme_node();
-        forWidth = themeNode.adjust_for_width(forWidth);
+        //forWidth = themeNode.adjust_for_width(forWidth);
 
         if (this._thumbnails.length === 0) {
             return;
@@ -877,13 +877,14 @@ const ThumbnailsBox = new Lang.Class({
 
         width = Math.min(maxWidth, width);
 
+/* @@
         // If the thumbnails box is "too wide" (see
         //  MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE), then we should always
         //  collapse the workspace thumbnails by default.
         _getWorkspaceDisplay()._alwaysZoomOut = (width <=
                 (Main.layoutManager.primaryMonitor.width *
                  settings.get_double(KEY_MAX_HFRACTION_COLLAPSE)));
-
+*/
         // natural width is nCols of workspaces + (nCols-1)*spacingX
         [alloc.min_size, alloc.natural_size] =
             themeNode.adjust_preferred_width(width, width);
@@ -1119,6 +1120,7 @@ function _replaceThumbnailsBoxActor (actorCallbackObject) {
         this.actor.connect('button-release-event', Lang.bind(this, patch._onButtonRelease));
     }).call(thumbnailsBox, actorCallbackObject);
 
+    thumbnailsBox.actor.y_expand = true;
     slider.actor.add_actor(thumbnailsBox.actor);
 }
 
@@ -1199,6 +1201,48 @@ function overrideWorkspaceDisplay() {
     TBProto._activeWorkspaceChanged = MyTBProto._activeWorkspaceChanged;
     TBProto.__defineGetter__('indicatorX', MyTBProto.__lookupGetter__('indicatorX'));
     TBProto.__defineSetter__('indicatorX', MyTBProto.__lookupSetter__('indicatorX'));
+
+    // 3. Patch updateAlwaysZoom (now a function in OverviewControls as opposed
+    //    to a property of workspaceDisplay)
+    // TODO: The sliding is broken. Must check `allocate`.
+    tbStorage._getAlwaysZoomOut = OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut;
+    OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut = function () {
+        // *Always* show the pager when hovering or during a drag, regardless of width.
+        let alwaysZoomOut = this.actor.hover ||  this.inDrag;
+
+        // always zoom out if there is a monitor to the right of primary.
+        if (!alwaysZoomOut) {
+            let monitors = Main.layoutManager.monitors;
+            let primary = Main.layoutManager.primaryMonitor;
+
+            /* Look for any monitor to the right of the primary, if there is
+             * one, we always keep zoom out, otherwise its hard to reach
+             * the thumbnail area without passing into the next monitor. */
+            for (let i = 0; i < monitors.length; i++) {
+                if (monitors[i].x >= primary.x + primary.width) {
+                    alwaysZoomOut = true;
+                    break;
+                }
+            }
+        }
+
+return alwaysZoomOut;
+
+        // but don't zoom out if we're really wide
+        let tooWide = false;
+        if (!alwaysZoomOut && Main.overview._thumbnailsBox.actor.mapped) {
+            tooWide = Main.overview._thumbnailsBox.actor.width >
+			(Main.layoutManager.primaryMonitor.width *
+			 settings.get_double(KEY_MAX_HFRACTION_COLLAPSE));
+            log('tooWide: ' + tooWide);
+        }
+        alwaysZoomOut = alwaysZoomOut || !tooWide;
+        log('alwaysZoomOut: ' + alwaysZoomOut);
+        // TODO: multimonitor behaviour: if we have multi monitors and it's too wide?
+        return alwaysZoomOut;
+    };
+
+
 
     // finally refresh the box.
     refreshThumbnailsBox();
