@@ -616,7 +616,7 @@ const ThumbnailsBox = new Lang.Class({
 
         this._dropWorkspace = -1;
         this._dropPlaceholderPos = -1;
-        this._dropPlaceholder = new St.Bin({ style_class: 'placeholder' });
+        this._dropPlaceholder = new St.Bin({ style_class: 'workspace-thumbnail-drop-indicator' });
         this.actor.add_actor(this._dropPlaceholder);
 
         this._targetScale = 0;
@@ -657,7 +657,6 @@ const ThumbnailsBox = new Lang.Class({
         // end this.parent()
 
         this._indicatorX = 0; // to match indicatorY
-        this._dropPlaceholderHorizontal = true;
     },
 
     /* when the user clicks on a thumbnail take into account the x position
@@ -689,114 +688,37 @@ const ThumbnailsBox = new Lang.Class({
         if (!Meta.prefs_get_dynamic_workspaces())
             return DND.DragMotionResult.CONTINUE;
 
-        let targetBaseX,
-            targetBaseY,
-            spacing = this.actor.get_theme_node().get_length('spacing'),
-            placeholderPos = -1,
-            placeholderOrient = -1;
-
-        this._dropWorkspace = -1;
-        if (this._dropPlaceholderPos === 0) {
-            targetBaseY = this._dropPlaceholder.y;
-        } else {
-            targetBaseY = this._thumbnails[0].actor.y;
+        // There used to be lots of code about dragging a window either:
+        //
+        // * on a workspace, or:
+        // * in the space "between" workspaces, in which case a new workspace
+        //   is inserted if the window is dropped there.
+        //
+        // I do not support the second behaviour in this extension because
+        // the number of workspaces is fixed (so there's no concept of adding
+        // a new workspace).
+        //
+        // Instead I'll just add an indicator as to which workspace is to be
+        // dropped onto (Note - might be a handy extension).
+        let newDropWorkspace = -1;
+        for (let i = 0; i < this._thumbnails.length; ++i) {
+            let th = this._thumbnails[i].actor;
+            let [w, h] = th.get_transformed_size();
+            //log('cursor x, y: (%d, %d). thumbnail %d bounds: (%d, %d) %dx%d'.format(x, y, i, th.x, th.y, w, h));
+            if (x >= th.x && x <= th.x + w && y >= th.y && y <= th.y + h) {
+                newDropWorkspace = i;
+                break;
+            }
         }
-        let targetTop = targetBaseY - spacing - WORKSPACE_CUT_SIZE;
-        let targetBottom, nextTargetBaseY, nextTargetTop, targetLeft;
-
-        for (let i = 0; i < this._thumbnails.length; i++) {
-            // Allow the reorder target to have a 10px "cut" into
-            // each side of the thumbnail, to make dragging onto the
-            // placeholder easier
-            let [row, col] = indexToRowCol(i),
-                [w, h] = this._thumbnails[i].actor.get_transformed_size();
-            if (col === 0) { // new row.
-                // 1) reset X targets to col 0
-                if (this._dropPlaceholderPos === 0) {
-                    targetBaseX = this._dropPlaceholder.x;
-                } else {
-                    targetBaseX = this._thumbnails[0].actor.x;
-                }
-                targetLeft = targetBaseX - spacing - WORKSPACE_CUT_SIZE;
-
-                // 2) increment Y targets
-                if (row > 0) {
-                    targetBaseY = nextTargetBaseY;
-                    targetTop = nextTargetTop; // THESE ARE GOING WRONG
-                }
-                targetBottom = targetBaseY + WORKSPACE_CUT_SIZE;
-                nextTargetBaseY = targetBaseY + h + spacing;
-                nextTargetTop = nextTargetBaseY - spacing -
-                    ((row === global.screen.workspace_grid.rows - 1) ? 0 :
-                         WORKSPACE_CUT_SIZE);
-            }
-            let targetRight = targetBaseX + WORKSPACE_CUT_SIZE,
-                nextTargetBaseX = targetBaseX + w + spacing,
-                nextTargetLeft =  nextTargetBaseX - spacing -
-                    ((col === global.screen.workspace_grid.cols - 1) ? 0 :
-                         WORKSPACE_CUT_SIZE);
-
-            // Expand the target to include the placeholder, if it exists.
-            if (i === this._dropPlaceholderPos) {
-                // have to guard against the -1 case...
-                if (this._dropPlaceholderHorizontal === true) {
-                    targetBottom += this._dropPlaceholder.get_height();
-                } else if (this._dropPlaceholderHorizontal === false) {
-                    targetRight += this._dropPlaceholder.get_width();
-                }
-            }
-
-            /*
-            log('target area for workspace %d (%d, %d):\n  horizontal (%d, %d) to (%d, %d)\n  vertical (%d, %d) to (%d, %d)'.format(
-                        i, row, col,
-                        targetBaseX, targetTop, targetBaseX + w, targetBottom,
-                        targetLeft, targetBaseY, targetRight, targetBaseY + h
-                        ));
-            */
-            if (y > targetTop && y <= targetBottom &&
-                    x >= targetBaseX && x <= (targetBaseX + w) &&
-                    source !== Main.xdndHandler) {
-                // workspace is placed
-                placeholderPos = i;
-                placeholderOrient = true;
-                break;
-            } else if (x > targetLeft && x <= targetRight &&
-                    y >= targetBaseY && y <= (targetBaseY + h) &&
-                    source !== Main.xdndHandler) {
-                placeholderPos = i;
-                placeholderOrient = false;
-                break;
-            } else if (y > targetBottom && y <= nextTargetTop &&
-                    x > targetLeft && x <= nextTargetLeft) {
-                this._dropWorkspace = i;
-                break;
-            }
-
-            targetBaseX = nextTargetBaseX;
-            targetLeft = nextTargetLeft;
-        }
-
-        if (this._dropPlaceholderPos !== placeholderPos ||
-            (placeholderOrient !== -1 &&
-                 this._dropPlaceholderHorizontal !== placeholderOrient)) {
-            this._dropPlaceholderPos = placeholderPos;
-            this._dropPlaceholderHorizontal = placeholderOrient;
-            if (this._dropPlaceholderHorizontal &&
-                    this._dropPlaceholder.has_style_class_name('placeholder-vertical')) {
-                this._dropPlaceholder.style_class = 'placeholder';
-            } else if (!this._dropPlaceholderHorizontal &&
-                    this._dropPlaceholder.has_style_class_name('placeholder')) {
-                this._dropPlaceholder.style_class = 'placeholder-vertical';
-            }
+        if (newDropWorkspace !== this._dropPlaceholderPos) {
+            this._dropPlaceholderPos = newDropWorkspace;
+            this._dropWorkspace = newDropWorkspace;
             this.actor.queue_relayout();
         }
 
         if (this._dropWorkspace !== -1)
             return this._thumbnails[this._dropWorkspace].handleDragOverInternal(
                     source, time);
-        else if (this._dropPlaceholderPos !== -1)
-            return source.realWindow ? DND.DragMotionResult.MOVE_DROP :
-                DND.DragMotionResult.COPY_DROP;
         else
             return DND.DragMotionResult.CONTINUE;
     },
@@ -983,6 +905,7 @@ const ThumbnailsBox = new Lang.Class({
                     this._dropPlaceholder.hide();
                 }));
         }
+        let dropPlaceholderPosX, dropPlaceholderPosY;
 
         for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
             x = contentBox.x1;
@@ -994,8 +917,7 @@ const ThumbnailsBox = new Lang.Class({
                 // spaced; we don't bother because I'm not smart enough to work
                 // it out (so the spacing on the left might be a few pixels
                 // more than that on the right).
-                let x1 = x,
-                    y1 = y;
+                let x1 = x;
 
                 if (thumbnail.slidePosition !== 0) {
                     if (rtl) {
@@ -1006,35 +928,12 @@ const ThumbnailsBox = new Lang.Class({
                 }
 
                 if (i === this._dropPlaceholderPos) {
-                    if (this._dropPlaceholderHorizontal) {
-                        let [minHeight, placeholderHeight] =
-                            this._dropPlaceholder.get_preferred_height(-1);
-                        childBox.x1 = x1;
-                        childBox.x2 = x1 + thumbnailWidth;
-                        childBox.y1 = y;
-                        childBox.y2 = y + placeholderHeight;
-
-                        y1 += placeholderHeight + spacing;
-                    } else {
-                        let [minWidth, placeholderWidth] =
-                            this._dropPlaceholder.get_preferred_width(-1);
-                        childBox.x1 = x1;
-                        childBox.x2 = x1 + placeholderWidth;
-                        childBox.y1 = y;
-                        childBox.y2 = y + thumbnailHeight;
-
-                        x += placeholderWidth + spacing;
-                        x1 += placeholderWidth + spacing;
-                    }
-                    this._dropPlaceholder.allocate(childBox, flags);
-                    Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this,
-                        function () {
-                            this._dropPlaceholder.show();
-                        }));
+                    dropPlaceholderPosX = x1;
+                    dropPlaceholderPosY = y;
                 }
 
                 if (thumbnail.metaWorkspace === indicatorWorkspace) {
-                    indicatorY = y1;
+                    indicatorY = y;
                     indicatorX = x1;
                 }
 
@@ -1043,8 +942,8 @@ const ThumbnailsBox = new Lang.Class({
                 // size.
                 childBox.x1 = x1;
                 childBox.x2 = x1 + portholeWidth;
-                childBox.y1 = y1;
-                childBox.y2 = y1 + portholeHeight;
+                childBox.y1 = y;
+                childBox.y2 = y + portholeHeight;
 
                 thumbnail.actor.set_scale(roundedHScale, roundedVScale);
                 thumbnail.actor.allocate(childBox, flags);
@@ -1075,6 +974,19 @@ const ThumbnailsBox = new Lang.Class({
         childBox.y1 = indicatorY;
         childBox.y2 = indicatorY + thumbnailHeight;
         this._indicator.allocate(childBox, flags);
+
+
+        if (dropPlaceholderPosX) {
+            childBox.x1 = dropPlaceholderPosX;
+            childBox.x2 = dropPlaceholderPosX + thumbnailWidth;
+            childBox.y1 = dropPlaceholderPosY;
+            childBox.y2 = dropPlaceholderPosY + thumbnailHeight;
+            this._dropPlaceholder.allocate(childBox, flags);
+            Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this,
+                function () {
+                    this._dropPlaceholder.show();
+                }));
+        }
     },
 
     destroy: function () {
