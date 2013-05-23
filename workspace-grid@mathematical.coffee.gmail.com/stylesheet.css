@@ -34,9 +34,8 @@
     font-size: 2em;
 }
 
-/* FIXME: include the horizontal .placeholder here? */
-.placeholder-vertical {
-    background-image: url("dash-placeholder-vertical.svg");
-    background-size: contain;
-    width: 24px;
+/* Drawn around the workspace we are going to drop on in thumbnails box */
+.workspace-thumbnail-drop-indicator {
+    box-shadow: 0px 0px 4px 6px white;
+    border: 1px solid #0e0e0e;
 }

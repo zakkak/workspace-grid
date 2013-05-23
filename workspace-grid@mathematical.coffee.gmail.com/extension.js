@@ -595,7 +595,7 @@ const ThumbnailsBox = new Lang.Class({
 
         this._dropWorkspace = -1;
         this._dropPlaceholderPos = -1;
-        this._dropPlaceholder = new St.Bin({ style_class: 'placeholder' });
+        this._dropPlaceholder = new St.Bin({ style_class: 'workspace-thumbnail-drop-indicator' });
         this.actor.add_actor(this._dropPlaceholder);
         this._spliceIndex = -1;
 
@@ -641,7 +641,6 @@ const ThumbnailsBox = new Lang.Class({
 
         // @@ added
         this._indicatorX = 0; // to match indicatorY
-        this._dropPlaceholderHorizontal = true;
     },
 
     /* when the user clicks on a thumbnail take into account the x position
@@ -656,7 +655,7 @@ const ThumbnailsBox = new Lang.Class({
             // add in the x criteria
             if (y >= thumbnail.actor.y && y <= thumbnail.actor.y + h &&
                     x >= thumbnail.actor.x && x <= thumbnail.actor.x + w) {
-                thumbnail.activate(event.get_time()); // <- SEGFAULT HERE
+                thumbnail.activate(event.get_time());
                 break;
             }
         }
@@ -666,121 +665,41 @@ const ThumbnailsBox = new Lang.Class({
 
     /* with drag and drop: modify to look at the x direction as well as the y */
     handleDragOver: function (source, actor, x, y, time) {
-        if (!source.realWindow && !source.shellWorkspaceLaunch &&
-                source !== Main.xdndHandler)
+        if (!source.realWindow && !source.shellWorkspaceLaunch && source != Main.xdndHandler)
             return DND.DragMotionResult.CONTINUE;
 
-        if (!Meta.prefs_get_dynamic_workspaces())
-            return DND.DragMotionResult.CONTINUE;
+        let spacing = this.actor.get_theme_node().get_length('spacing');
 
-        let targetBaseX,
-            targetBaseY,
-            spacing = this.actor.get_theme_node().get_length('spacing'),
-            placeholderPos = -1,
-            placeholderOrient = -1;
-
-        this._dropWorkspace = -1;
-        if (this._dropPlaceholderPos === 0) {
-            targetBaseY = this._dropPlaceholder.y;
-        } else {
-            targetBaseY = this._thumbnails[0].actor.y;
+        // There used to be lots of code about dragging a window either:
+        //
+        // * on a workspace, or:
+        // * in the space "between" workspaces, in which case a new workspace
+        //   is inserted if the window is dropped there.
+        //
+        // I do not support the second behaviour in this extension because
+        // the number of workspaces is fixed (so there's no concept of adding
+        // a new workspace).
+        //
+        // Instead I'll just add an indicator as to which workspace is to be
+        // dropped onto (Note - might be a handy extension).
+        let newDropWorkspace = -1;
+        for (let i = 0; i < this._thumbnails.length; ++i) {
+            let th = this._thumbnails[i].actor;
+            let [w, h] = th.get_transformed_size();
+            if (x >= th.x && x <= th.x + w && y >= th.y && y <= th.y + h) {
+                newDropWorkspace = i;
+                break;
+            }
         }
-        let targetTop = targetBaseY - spacing - WORKSPACE_CUT_SIZE;
-        let targetBottom, nextTargetBaseY, nextTargetTop, targetLeft;
-
-        for (let i = 0; i < this._thumbnails.length; i++) {
-            // Allow the reorder target to have a 10px "cut" into
-            // each side of the thumbnail, to make dragging onto the
-            // placeholder easier
-            let [row, col] = indexToRowCol(i),
-                [w, h] = this._thumbnails[i].actor.get_transformed_size();
-            if (col === 0) { // new row.
-                // 1) reset X targets to col 0
-                if (this._dropPlaceholderPos === 0) {
-                    targetBaseX = this._dropPlaceholder.x;
-                } else {
-                    targetBaseX = this._thumbnails[0].actor.x;
-                }
-                targetLeft = targetBaseX - spacing - WORKSPACE_CUT_SIZE;
-
-                // 2) increment Y targets
-                if (row > 0) {
-                    targetBaseY = nextTargetBaseY;
-                    targetTop = nextTargetTop; // THESE ARE GOING WRONG
-                }
-                targetBottom = targetBaseY + WORKSPACE_CUT_SIZE;
-                nextTargetBaseY = targetBaseY + h + spacing;
-                nextTargetTop = nextTargetBaseY - spacing -
-                    ((row === global.screen.workspace_grid.rows - 1) ? 0 :
-                         WORKSPACE_CUT_SIZE);
-            }
-            let targetRight = targetBaseX + WORKSPACE_CUT_SIZE,
-                nextTargetBaseX = targetBaseX + w + spacing,
-                nextTargetLeft =  nextTargetBaseX - spacing -
-                    ((col === global.screen.workspace_grid.cols - 1) ? 0 :
-                         WORKSPACE_CUT_SIZE);
-
-            // Expand the target to include the placeholder, if it exists.
-            if (i === this._dropPlaceholderPos) {
-                // have to guard against the -1 case...
-                if (this._dropPlaceholderHorizontal === true) {
-                    targetBottom += this._dropPlaceholder.get_height();
-                } else if (this._dropPlaceholderHorizontal === false) {
-                    targetRight += this._dropPlaceholder.get_width();
-                }
-            }
-
-            /*
-            log('target area for workspace %d (%d, %d):\n  horizontal (%d, %d) to (%d, %d)\n  vertical (%d, %d) to (%d, %d)'.format(
-                        i, row, col,
-                        targetBaseX, targetTop, targetBaseX + w, targetBottom,
-                        targetLeft, targetBaseY, targetRight, targetBaseY + h
-                        ));
-            */
-            if (y > targetTop && y <= targetBottom &&
-                    x >= targetBaseX && x <= (targetBaseX + w) &&
-                    source !== Main.xdndHandler) {
-                // workspace is placed
-                placeholderPos = i;
-                placeholderOrient = true;
-                break;
-            } else if (x > targetLeft && x <= targetRight &&
-                    y >= targetBaseY && y <= (targetBaseY + h) &&
-                    source !== Main.xdndHandler) {
-                placeholderPos = i;
-                placeholderOrient = false;
-                break;
-            } else if (y > targetBottom && y <= nextTargetTop &&
-                    x > targetLeft && x <= nextTargetLeft) {
-                this._dropWorkspace = i;
-                break;
-            }
-
-            targetBaseX = nextTargetBaseX;
-            targetLeft = nextTargetLeft;
-        }
-
-        if (this._dropPlaceholderPos !== placeholderPos ||
-            (placeholderOrient !== -1 &&
-                 this._dropPlaceholderHorizontal !== placeholderOrient)) {
-            this._dropPlaceholderPos = placeholderPos;
-            this._dropPlaceholderHorizontal = placeholderOrient;
-            if (this._dropPlaceholderHorizontal &&
-                    this._dropPlaceholder.has_style_class_name('placeholder-vertical')) {
-                this._dropPlaceholder.style_class = 'placeholder';
-            } else if (!this._dropPlaceholderHorizontal &&
-                    this._dropPlaceholder.has_style_class_name('placeholder')) {
-                this._dropPlaceholder.style_class = 'placeholder-vertical';
-            }
+        if (newDropWorkspace !== this._dropPlaceholderPos) {
+            this._dropPlaceholderPos = newDropWorkspace;
+            this._dropWorkspace = newDropWorkspace;
             this.actor.queue_relayout();
         }
 
         if (this._dropWorkspace !== -1)
             return this._thumbnails[this._dropWorkspace].handleDragOverInternal(
                     source, time);
-        else if (this._dropPlaceholderPos !== -1)
-            return source.realWindow ? DND.DragMotionResult.MOVE_DROP :
-                DND.DragMotionResult.COPY_DROP;
         else
             return DND.DragMotionResult.CONTINUE;
     },
@@ -977,6 +896,10 @@ const ThumbnailsBox = new Lang.Class({
                 this._dropPlaceholder.hide();
             }));
         }
+        let dropPlaceholderPosX1,
+            dropPlaceholderPosX2,
+            dropPlaceholderPosY1,
+            dropPlaceholderPosY2;
 
         // TODO: rtl.
         // TODO: what if there are 36 rows 1 column? do I get tiny workspaces?
@@ -1001,20 +924,6 @@ const ThumbnailsBox = new Lang.Class({
             // reset x.
             x = rtl ? contentBox.x1 : contentBox.x2 - thumbnailsWidth;
             for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
-/*
-                if (i == this._dropPlaceholderPos) {
-                    let [minHeight, placeholderHeight] = this._dropPlaceholder.get_preferred_height(-1);
-                    childBox.x1 = x1;
-                    childBox.x2 = x1 + thumbnailWidth;
-                    childBox.y1 = Math.round(y);
-                    childBox.y2 = Math.round(y + placeholderHeight);
-                    this._dropPlaceholder.allocate(childBox, flags);
-                    Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this, function() {
-                        this._dropPlaceholder.show();
-                    }));
-                    y += placeholderHeight + spacing;
-                }
-*/
                 let thumbnail = this._thumbnails[i];
                 let x1 = Math.round(x),
                     x2 = Math.round(x + thumbnailWidth),
@@ -1027,8 +936,16 @@ const ThumbnailsBox = new Lang.Class({
                     indicatorX2 = x2;
                 }
 
-                // Allocating a scaled actor is funny - x1/y1 correspond to the origin
-                // of the actor, but x2/y2 are increased by the *unscaled* size.
+                if (i === this._dropPlaceholderPos) {
+                    dropPlaceholderPosX1 = x1;
+                    dropPlaceholderPosX2 = x2;
+                    dropPlaceholderPosY1 = y1;
+                    dropPlaceholderPosY2 = y2;
+                }
+
+                // Allocating a scaled actor is funny - x1/y1 correspond to the
+                // origin of the actor, but x2/y2 are increased by the unscaled
+                // size.
                 childBox.x1 = x1;
                 childBox.x2 = x1 + portholeWidth;
                 childBox.y1 = y1;
@@ -1051,6 +968,19 @@ const ThumbnailsBox = new Lang.Class({
         childBox.y1 = indicatorY1 - indicatorTopFullBorder;
         childBox.y2 = (indicatorY2 ? indicatorY2 : (indicatorY1 + thumbnailHeight)) + indicatorBottomFullBorder;
         this._indicator.allocate(childBox, flags);
+
+
+        if (dropPlaceholderPosX1) {
+            childBox.x1 = dropPlaceholderPosX1;
+            childBox.x2 = dropPlaceholderPosX2;
+            childBox.y1 = dropPlaceholderPosY1;
+            childBox.y2 = dropPlaceholderPosY2;
+            this._dropPlaceholder.allocate(childBox, flags);
+            Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this,
+                function () {
+                    this._dropPlaceholder.show();
+                }));
+        }
     },
 
     destroy: function () {
@@ -1075,7 +1005,8 @@ function refreshThumbnailsBox() {
     // get the thumbnailsbox to re-allocate itself
     // (TODO: for some reason the *first* overview show won't respect this but
     // subsequent ones will).
-    Main.overview._thumbnailsBox.actor.queue_relayout();
+    // @@Main.overview._thumbnailsBox.actor.queue_relayout();
+    Main.overview._controls._thumbnailsSlider.actor.queue_relayout();
 }
 
 /** Does everything in ThumbnailsBox._init to do with this.actor so that I
@@ -1183,12 +1114,14 @@ function overrideWorkspaceDisplay() {
 
     // add in the properties/functions I want.
     thumbnailsBox._indicatorX = 0;
-    thumbnailsBox._dropPlaceholderHorizontal = true;
+    // patch the dropPlaceholder to show a glow around the workspace being
+    // dropped on rather than the "new workspace" indicator.
+    thumbnailsBox._dropPlaceholder.style_class = 'workspace-thumbnail-drop-indicator';
 
-    tbStorage.handleDragover = TBProto.handleDragover;
+    tbStorage.handleDragOver = TBProto.handleDragOver;
     tbStorage._activeWorkspaceChanged = TBProto._activeWorkspaceChanged;
 
-    TBProto.handleDragover = MyTBProto.handleDragover;
+    TBProto.handleDragOver = MyTBProto.handleDragOver;
     TBProto._activeWorkspaceChanged = MyTBProto._activeWorkspaceChanged;
     TBProto.__defineGetter__('indicatorX', MyTBProto.__lookupGetter__('indicatorX'));
     TBProto.__defineSetter__('indicatorX', MyTBProto.__lookupSetter__('indicatorX'));
@@ -1217,19 +1150,13 @@ function overrideWorkspaceDisplay() {
             }
         }
 
-return alwaysZoomOut;
-
-        // but don't zoom out if we're really wide
-        let tooWide = false;
+        // always zoom out if we are not too wide
         if (!alwaysZoomOut && Main.overview._thumbnailsBox.actor.mapped) {
-            tooWide = Main.overview._thumbnailsBox.actor.width >
-			(Main.layoutManager.primaryMonitor.width *
-			 settings.get_double(KEY_MAX_HFRACTION_COLLAPSE));
-            log('tooWide: ' + tooWide);
+            alwaysZoomOut = Main.overview._thumbnailsBox.actor.width <=
+                            (Main.layoutManager.primaryMonitor.width *
+                             settings.get_double(KEY_MAX_HFRACTION_COLLAPSE));
         }
-        alwaysZoomOut = alwaysZoomOut || !tooWide;
-        log('alwaysZoomOut: ' + alwaysZoomOut);
-        // TODO: multimonitor behaviour: if we have multi monitors and it's too wide?
+
         return alwaysZoomOut;
     };
 
@@ -1256,11 +1183,16 @@ function unoverrideWorkspaceDisplay() {
 
     // 2. replace the thumbnails box actor
     // restore functions
-    TBProto.handleDragOver = tbStorage.handleDragover;
+    TBProto.handleDragOver = tbStorage.handleDragOver;
     TBProto._activeWorkspaceChanged = tbStorage._activeWorkspaceChanged;
     delete TBProto.indicatorX; // remove the getter/setter
     // replace the actor
     _replaceThumbnailsBoxActor(TBProto);
+    Main.overview._thumbnailsBox._dropPlaceholder.style_class = 'placeholder';
+
+    // 3. Unpatch updateAlwaysZoom
+    OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut = tbStorage._getAlwaysZoomOut;
+
     refreshThumbnailsBox();
 }
 
