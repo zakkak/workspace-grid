@@ -808,8 +808,11 @@ const ThumbnailsBox = new Lang.Class({
         }
 
         this._animatingIndicator = true;
-        this.indicatorY = this._indicator.allocation.y1;
-        this.indicatorX = this._indicator.allocation.x1; // <-- added
+        let indicatorThemeNode = this._indicator.get_theme_node(),
+            indicatorTopFullBorder = indicatorThemeNode.get_padding(St.Side.TOP) + indicatorThemeNode.get_border_width(St.Side.TOP),
+            indicatorLeftFullBorder = indicatorThemeNode.get_padding(St.Side.LEFT) + indicatorThemeNode.get_border_width(St.Side.LEFT);
+        this.indicatorX = this._indicator.allocation.x1 + indicatorLeftFullBorder; // <-- added
+        this.indicatorY = this._indicator.allocation.y1 + indicatorTopFullBorder;
         Tweener.addTween(this,
                          { indicatorY: thumbnail.actor.allocation.y1,
                            indicatorX: thumbnail.actor.allocation.x1, // added
@@ -1020,6 +1023,8 @@ const ThumbnailsBox = new Lang.Class({
                 if (thumbnail.metaWorkspace == indicatorWorkspace) {
                     indicatorY1 = y1;
                     indicatorY2 = y2;
+                    indicatorX1 = x1;
+                    indicatorX2 = x2;
                 }
 
                 // Allocating a scaled actor is funny - x1/y1 correspond to the origin
@@ -1034,23 +1039,18 @@ const ThumbnailsBox = new Lang.Class({
 
                 x += thumbnailWidth + spacing;
                 ++i;
+                if (i >= MAX_WORKSPACES) {
+                    break;
+                }
             } // col loop
             y += thumbnailHeight + spacing;
         } // row loop
-/*(
-       if (rtl) {
-            childBox.x1 = contentBox.x1;
-            childBox.x2 = contentBox.x1 + thumbnailWidth;
-        } else {
-            childBox.x1 = contentBox.x2 - thumbnailWidth;
-            childBox.x2 = contentBox.x2;
-        }
-        childBox.x1 -= indicatorLeftFullBorder;
-        childBox.x2 += indicatorRightFullBorder;
+        // allocate the indicator
+        childBox.x1 = indicatorX1 - indicatorLeftFullBorder;
+        childBox.x2 = (indicatorX2 ? indicatorX2 : (indicatorX1 + thumbnailWidth)) + indicatorLeftFullBorder;
         childBox.y1 = indicatorY1 - indicatorTopFullBorder;
         childBox.y2 = (indicatorY2 ? indicatorY2 : (indicatorY1 + thumbnailHeight)) + indicatorBottomFullBorder;
         this._indicator.allocate(childBox, flags);
-        */
     },
 
     destroy: function () {
