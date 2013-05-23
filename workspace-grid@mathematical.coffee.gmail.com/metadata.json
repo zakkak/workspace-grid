@@ -9,5 +9,6 @@
      "3.8"
  ],
  "url": "https://bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension",
- "dev-version": "1.1.1"
+ "dev-version": "1.2",
+ "version": 13
 }
