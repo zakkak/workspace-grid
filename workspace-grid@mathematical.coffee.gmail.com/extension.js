@@ -825,7 +825,6 @@ const ThumbnailsBox = new Lang.Class({
         let nCols = global.screen.workspace_grid.columns,
             nRows = global.screen.workspace_grid.rows,
             totalSpacingY = (nRows - 1) * spacing,
-            totalSpacingX = (nCols - 1) * spacing,
             availY = (contentBox.y2 - contentBox.y1) - totalSpacingY;
 
         // work out what scale we need to squeeze all the rows/cols of
@@ -851,15 +850,9 @@ const ThumbnailsBox = new Lang.Class({
             this._queueUpdateStates();
         }
 
-        let thumbnailHeight = portholeHeight * this._scale;
-        let thumbnailWidth = Math.round(portholeWidth * this._scale),
+        let thumbnailHeight = portholeHeight * this._scale,
+            thumbnailWidth = Math.round(portholeWidth * this._scale),
             thumbnailsWidth = thumbnailWidth * nCols + spacing * (nCols - 1);
-
-        let slideOffset; // X offset when thumbnail is fully slid offscreen
-        if (rtl)
-            slideOffset = - (thumbnailsWidth + themeNode.get_padding(St.Side.LEFT));
-        else
-            slideOffset = thumbnailsWidth + themeNode.get_padding(St.Side.RIGHT);
 
         let childBox = new Clutter.ActorBox();
 
@@ -879,15 +872,15 @@ const ThumbnailsBox = new Lang.Class({
         let indicatorY1 = this._indicatorY,
             indicatorX1 = this._indicatorX,
             indicatorY2,
-            indicatorX2;
+            indicatorX2,
         // when not animating, the workspace position overrides this._indicatorY
-        let indicatorWorkspace = !this._animatingIndicator ? global.screen.get_active_workspace() : null;
-        let indicatorThemeNode = this._indicator.get_theme_node();
+            indicatorWorkspace = !this._animatingIndicator ? global.screen.get_active_workspace() : null;
+            indicatorThemeNode = this._indicator.get_theme_node(),
 
-        let indicatorTopFullBorder = indicatorThemeNode.get_padding(St.Side.TOP) + indicatorThemeNode.get_border_width(St.Side.TOP);
-        let indicatorBottomFullBorder = indicatorThemeNode.get_padding(St.Side.BOTTOM) + indicatorThemeNode.get_border_width(St.Side.BOTTOM);
-        let indicatorLeftFullBorder = indicatorThemeNode.get_padding(St.Side.LEFT) + indicatorThemeNode.get_border_width(St.Side.LEFT);
-        let indicatorRightFullBorder = indicatorThemeNode.get_padding(St.Side.RIGHT) + indicatorThemeNode.get_border_width(St.Side.RIGHT);
+            indicatorTopFullBorder = indicatorThemeNode.get_padding(St.Side.TOP) + indicatorThemeNode.get_border_width(St.Side.TOP),
+            indicatorBottomFullBorder = indicatorThemeNode.get_padding(St.Side.BOTTOM) + indicatorThemeNode.get_border_width(St.Side.BOTTOM),
+            indicatorLeftFullBorder = indicatorThemeNode.get_padding(St.Side.LEFT) + indicatorThemeNode.get_border_width(St.Side.LEFT),
+            indicatorRightFullBorder = indicatorThemeNode.get_padding(St.Side.RIGHT) + indicatorThemeNode.get_border_width(St.Side.RIGHT);
 
 
         if (this._dropPlaceholderPos == -1) {
@@ -910,7 +903,7 @@ const ThumbnailsBox = new Lang.Class({
         let y = contentBox.y1 + (availY - (nRows * thumbnailHeight)) / 2, // centre
             x = rtl ? contentBox.x1 : contentBox.x2 - thumbnailsWidth,
             i = 0;
-        for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
+        for (let row = 0; row < nRows; ++row) {
             // We might end up with thumbnailHeight being something like 99.33
             // pixels. To make this work and not end up with a gap at the bottom,
             // we need some thumbnails to be 99 pixels and some 100 pixels height;
@@ -920,7 +913,7 @@ const ThumbnailsBox = new Lang.Class({
                 roundedVScale = (y2 - y1) / portholeHeight;
             // reset x.
             x = rtl ? contentBox.x1 : contentBox.x2 - thumbnailsWidth;
-            for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
+            for (let col = 0; col < nCols; ++col) {
                 let thumbnail = this._thumbnails[i];
                 let x1 = Math.round(x),
                     x2 = Math.round(x + thumbnailWidth),
@@ -957,6 +950,9 @@ const ThumbnailsBox = new Lang.Class({
                     break;
                 }
             } // col loop
+            if (i >= MAX_WORKSPACES) {
+                break;
+            }
             y += thumbnailHeight + spacing;
         } // row loop
         // allocate the indicator
