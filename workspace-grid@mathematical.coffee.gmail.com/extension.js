@@ -660,7 +660,6 @@ ThumbnailsBox.prototype = {
             totalSpacingX = (nCols - 1) * spacing,
             availX = (contentBox.x2 - contentBox.x1) - totalSpacingX,
             availY = (contentBox.y2 - contentBox.y1) - totalSpacingY;
-
         // work out what scale we need to squeeze all the rows/cols of
         // workspaces in
         let newScale = Math.min((availX / nCols) / portholeWidth,
@@ -683,15 +682,7 @@ ThumbnailsBox.prototype = {
 
         let thumbnailHeight = portholeHeight * this._scale,
             thumbnailWidth = portholeWidth * this._scale,
-            roundedHScale = Math.round(thumbnailWidth) / portholeWidth,
-            roundedVScale = Math.round(thumbnailHeight) / portholeHeight;
-
-        let slideOffset; // X offset when thumbnail is fully slid offscreen
-        // (animate sliding that column onto screen)
-        if (rtl)
-            slideOffset = -thumbnailWidth + themeNode.get_padding(St.Side.LEFT);
-        else
-            slideOffset = thumbnailWidth + themeNode.get_padding(St.Side.RIGHT);
+            thumbnailsWidth = nCols * thumbnailWidth + totalSpacingX;
 
         let childBox = new Clutter.ActorBox();
 
@@ -709,30 +700,21 @@ ThumbnailsBox.prototype = {
         // position roughly centred vertically: start at y1 + (backgroundHeight
         //  - thumbnailsHeights)/2
         let y = contentBox.y1 + (availY - (nRows * thumbnailHeight)) / 2,
-            x = contentBox.x1,
-            i = 0,
-            thumbnail;
+            x = rtl ? contentBox.x1 : contentBox.x2 - thumbnailsWidth,
+            i = 0;
 
-        for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
-            x = contentBox.x1;
-            for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
-                thumbnail = this._thumbnails[i];
-
-                // NOTE: original ThumbnailsBox does a lot of intricate calcul-
-                // ations to do with rounding to make sure everything's evenly
-                // spaced; we don't bother because I'm not smart enough to work
-                // it out (so the spacing on the left might be a few pixels
-                // more than that on the right).
-                let x1 = x,
-                    y1 = y;
-
-                if (thumbnail.slidePosition !== 0) {
-                    if (rtl) {
-                        x1 -= slideOffset * thumbnail.slidePosition;
-                    } else {
-                        x1 += slideOffset * thumbnail.slidePosition;
-                    }
-                }
+        // Note: will ignore all collapseFraction/slidePosition stuff as since
+        // workspaces are static, there is no concept of removing/adding
+        // workspaces (a workspace slides out before collapsing when destroyed).
+        for (let row = 0; row < nRows; ++row) {
+            let y1 = Math.round(y),
+               roundedVScale = (Math.round(y + thumbnailHeight) - y1) / portholeHeight;
+            // reset x.
+            x = rtl ? contentBox.x1 : contentBox.x2 - thumbnailsWidth;
+            for (let col = 0; col < nCols; ++col) {
+                let thumbnail = this._thumbnails[i],
+                    x1 = Math.round(x),
+                    roundedHScale = (Math.round(x + thumbnailWidth) - x1) / portholeWidth;
 
                 if (thumbnail.metaWorkspace === indicatorWorkspace) {
                     indicatorY = y1;
@@ -750,21 +732,14 @@ ThumbnailsBox.prototype = {
                 thumbnail.actor.set_scale(roundedHScale, roundedVScale);
                 thumbnail.actor.allocate(childBox, flags);
 
-                x += thumbnailWidth - thumbnailWidth *
-                    thumbnail.collapseFraction;
-
-                // add spacing
-                x += spacing - thumbnail.collapseFraction * spacing;
-
+                x += thumbnailWidth + spacing;
                 ++i;
                 if (i >= MAX_WORKSPACES) {
                     break;
                 }
             }
-            y += thumbnailHeight - thumbnailHeight * thumbnail.collapseFraction;
+            y += thumbnailHeight + spacing;
             // add spacing
-            y += spacing - thumbnail.collapseFraction * spacing;
-
             if (i >= MAX_WORKSPACES) {
                 break;
             }
