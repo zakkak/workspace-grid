@@ -108,8 +108,10 @@
  * - use of setCustomKeybindingHandler allows modes (normal/overview) to be
  *    passed in, so it's no longer to override globalKeyPressHandler
  * - calculateWorkspace can use get_neighbor() which is now exposed.
- *   We wrap around to the *same* row/column (if KEY_WRAPAROUND is true)
  * - no need to reconstruct workspace controls (I think)
+ * - _allocate code changed quite a bit to ensure thumbnails fit horizontally
+ *    as the width given to _allocate is now the actual *onscreen* width
+ *    (used to be the preferred width I think whether or not that fit on screen).
  */
 
 ////////// CODE ///////////
@@ -783,7 +785,6 @@ const ThumbnailsBox = new Lang.Class({
             totalSpacingX = (nCols - 1) * spacing,
             totalSpacingY = (nRows - 1) * spacing,
             availY = forHeight - totalSpacingY,
-            //scale = (availY / nRows) / this._porthole.height;
             scale = (availY < 0 ? MAX_THUMBNAIL_SCALE :
                     (availY / nRows) / this._porthole.height);
 
@@ -796,17 +797,11 @@ const ThumbnailsBox = new Lang.Class({
                             settings.get_double(KEY_MAX_HFRACTION)) -
                        this.actor.get_theme_node().get_horizontal_padding() -
                        themeNode.get_horizontal_padding();
+        // store the horizontal scale for use in _allocate.
+        this._maxHscale = (maxWidth - totalSpacingX) / nCols / this._porthole.width;
 
         width = Math.min(maxWidth, width);
 
-/* @@
-        // If the thumbnails box is "too wide" (see
-        //  MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE), then we should always
-        //  collapse the workspace thumbnails by default.
-        _getWorkspaceDisplay()._alwaysZoomOut = (width <=
-                (Main.layoutManager.primaryMonitor.width *
-                 settings.get_double(KEY_MAX_HFRACTION_COLLAPSE)));
-*/
         // natural width is nCols of workspaces + (nCols-1)*spacingX
         [alloc.min_size, alloc.natural_size] =
             themeNode.adjust_preferred_width(width, width);
@@ -837,6 +832,10 @@ const ThumbnailsBox = new Lang.Class({
         // workspaces in
         let newScale = Math.min((availY / nRows) / portholeHeight,
                                 MAX_THUMBNAIL_SCALE);
+        if (this._maxHscale) {
+            // ensure we fit horizontally too.
+            newScale = Math.min(this._maxHscale, newScale);
+        }
 
         if (newScale != this._targetScale) {
             if (this._targetScale > 0) {
@@ -1188,7 +1187,11 @@ function unoverrideWorkspaceDisplay() {
     delete TBProto.indicatorX; // remove the getter/setter
     // replace the actor
     _replaceThumbnailsBoxActor(TBProto);
-    Main.overview._thumbnailsBox._dropPlaceholder.style_class = 'placeholder';
+    let thumbnailsBox = Main.overview._thumbnailsBox;
+    thumbnailsBox._dropPlaceholder.style_class = 'placeholder';
+    delete thumbnailsBox._indicatorX;
+    delete thumbnailsBox._maxHscale;
+
 
     // 3. Unpatch updateAlwaysZoom
     OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut = tbStorage._getAlwaysZoomOut;
