@@ -84,6 +84,18 @@ The relevant settings:
 
 ---
 
+# Changelog
+
+**Version 1.2 (23-05-2013)** (on extensions.gnome.org: v10 (GNOME 3.2), v11 (GNOME 3.4), v12 (GNOME 3.6), v13 (GNOME 3.8)):
+
+* Added GNOME 3.8 support
+* Added option to wraparound to the same or the next row (if wraparound is enabled);
+* Removed the ability to drop "between" a workspace to create a new on (as we have static workspaces).
+* When a thumbnail is dragged over another workspace, that workspace has a glow to indicate it is the target.
+* misc. code cleaning, particularly to do with allocating the thumbnails slidebar
+
+---
+
 # For developers wanting to integrate with this extension
 
 If you wish to see if your extension is compatible with this one, these are things you need to know.
