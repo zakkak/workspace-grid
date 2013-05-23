@@ -891,36 +891,36 @@ const ThumbnailsBox = new Lang.Class({
     },
 
     _allocate: function (actor, box, flags) {
-        if (this._thumbnails.length === 0) // not visible
+        let rtl = (Clutter.get_default_text_direction () == Clutter.TextDirection.RTL);
+
+        // See comment about this._background in _init()
+        let themeNode = this._background.get_theme_node();
+        let contentBox = themeNode.get_content_box(box);
+
+        if (this._thumbnails.length == 0) // not visible
             return;
 
-        let rtl = (Clutter.get_default_text_direction() ===
-                Clutter.TextDirection.RTL),
-        // See comment about this._background in _init()
-            themeNode = this._background.get_theme_node(),
-            contentBox = themeNode.get_content_box(box),
-            portholeWidth = this._porthole.width,
-            portholeHeight = this._porthole.height,
-            spacing = this.actor.get_theme_node().get_length('spacing'),
+        let portholeWidth = this._porthole.width;
+        let portholeHeight = this._porthole.height;
+        let spacing = this.actor.get_theme_node().get_length('spacing');
+
         // Compute the scale we'll need once everything is updated
-            nCols = global.screen.workspace_grid.columns,
+        let nCols = global.screen.workspace_grid.columns,
             nRows = global.screen.workspace_grid.rows,
             totalSpacingY = (nRows - 1) * spacing,
             totalSpacingX = (nCols - 1) * spacing,
-            availX = (contentBox.x2 - contentBox.x1) - totalSpacingX,
             availY = (contentBox.y2 - contentBox.y1) - totalSpacingY;
 
         // work out what scale we need to squeeze all the rows/cols of
         // workspaces in
-        let newScale = Math.min((availX / nCols) / portholeWidth,
-                            (availY / nRows) / portholeHeight,
-                            MAX_THUMBNAIL_SCALE);
+        let newScale = Math.min((availY / nRows) / portholeHeight,
+                                MAX_THUMBNAIL_SCALE);
 
-        if (newScale !== this._targetScale) {
+        if (newScale != this._targetScale) {
             if (this._targetScale > 0) {
-                // We don't do the tween immediately because we need to observe
-                // the ordering in queueUpdateStates - if workspaces have been
-                // removed we need to slide them out as the first thing.
+                // We don't do the tween immediately because we need to observe the ordering
+                // in queueUpdateStates - if workspaces have been removed we need to slide them
+                // out as the first thing.
                 this._targetScale = newScale;
                 this._pendingScaleUpdate = true;
             } else {
@@ -930,102 +930,100 @@ const ThumbnailsBox = new Lang.Class({
             this._queueUpdateStates();
         }
 
-        let thumbnailHeight = portholeHeight * this._scale,
-            thumbnailWidth = portholeWidth * this._scale,
-            roundedHScale = Math.round(thumbnailWidth) / portholeWidth,
-            roundedVScale = Math.round(thumbnailHeight) / portholeHeight;
+        let thumbnailHeight = portholeHeight * this._scale;
+        let thumbnailWidth = Math.round(portholeWidth * this._scale),
+            thumbnailsWidth = thumbnailWidth * nCols + spacing * (nCols - 1);
 
         let slideOffset; // X offset when thumbnail is fully slid offscreen
-        // (animate sliding that column onto screen)
         if (rtl)
-            slideOffset = -thumbnailWidth + themeNode.get_padding(St.Side.LEFT);
+            slideOffset = - (thumbnailsWidth + themeNode.get_padding(St.Side.LEFT));
         else
-            slideOffset = thumbnailWidth + themeNode.get_padding(St.Side.RIGHT);
+            slideOffset = thumbnailsWidth + themeNode.get_padding(St.Side.RIGHT);
 
         let childBox = new Clutter.ActorBox();
 
-        // Don't understand workspaceThumbnail.js here - I just cover the
-        // entire allocation?
-        this._background.allocate(box, flags);
-        // old: box.x1 = box.x1 + (contentBox.x2-contentBox.x1) - thumbnailWid
+        // The background is horizontally restricted to correspond to the current thumbnail size
+        // but otherwise covers the entire allocation
+        if (rtl) {
+            childBox.x1 = box.x1;
+            childBox.x2 = box.x2 - ((contentBox.x2 - contentBox.x1) - thumbnailsWidth);
+        } else {
+            childBox.x1 = box.x1 + ((contentBox.x2 - contentBox.x1) - thumbnailsWidth);
+            childBox.x2 = box.x2;
+        }
+        childBox.y1 = box.y1;
+        childBox.y2 = box.y2;
+        this._background.allocate(childBox, flags);
 
-        let indicatorY = this._indicatorY,
-            indicatorX = this._indicatorX;
+        let indicatorY1 = this._indicatorY,
+            indicatorX1 = this._indicatorX,
+            indicatorY2,
+            indicatorX2;
         // when not animating, the workspace position overrides this._indicatorY
-        let indicatorWorkspace = !this._animatingIndicator ?
-            global.screen.get_active_workspace() : null;
+        let indicatorWorkspace = !this._animatingIndicator ? global.screen.get_active_workspace() : null;
+        let indicatorThemeNode = this._indicator.get_theme_node();
 
-        // position roughly centred vertically: start at y1 + (backgroundHeight
-        //  - thumbnailsHeights)/2
-        let y = contentBox.y1 + (availY - (nRows * thumbnailHeight)) / 2,
-            x = contentBox.x1,
-            i = 0,
-            thumbnail;
+        let indicatorTopFullBorder = indicatorThemeNode.get_padding(St.Side.TOP) + indicatorThemeNode.get_border_width(St.Side.TOP);
+        let indicatorBottomFullBorder = indicatorThemeNode.get_padding(St.Side.BOTTOM) + indicatorThemeNode.get_border_width(St.Side.BOTTOM);
+        let indicatorLeftFullBorder = indicatorThemeNode.get_padding(St.Side.LEFT) + indicatorThemeNode.get_border_width(St.Side.LEFT);
+        let indicatorRightFullBorder = indicatorThemeNode.get_padding(St.Side.RIGHT) + indicatorThemeNode.get_border_width(St.Side.RIGHT);
 
-        if (this._dropPlaceholderPos === -1) {
-            Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this,
-                function () {
-                    this._dropPlaceholder.hide();
-                }));
+
+        if (this._dropPlaceholderPos == -1) {
+            Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this, function() {
+                this._dropPlaceholder.hide();
+            }));
         }
 
+        // TODO: rtl.
+        // TODO: what if there are 36 rows 1 column? do I get tiny workspaces?
+
+        // Note: in theory I don't have to worry about the collapseFraction/slidePosition
+        // stuff because since the number of workspaces is static, thumbnails
+        // will never end up sliding in/out or collapsing
+        // (when a workspace is destroyed it slides out horizontally then the
+        //  space collapses vertically)
+        // Hence I ignore all of the collapseFraction/slidePosition stuff.
+        let y = contentBox.y1 + (availY - (nRows * thumbnailHeight)) / 2, // centre
+            x = rtl ? contentBox.x1 : contentBox.x2 - thumbnailsWidth,
+            i = 0;
         for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
-            x = contentBox.x1;
+            // We might end up with thumbnailHeight being something like 99.33
+            // pixels. To make this work and not end up with a gap at the bottom,
+            // we need some thumbnails to be 99 pixels and some 100 pixels height;
+            // we compute an actual scale separately for each thumbnail.
+            let y1 = Math.round(y),
+                y2 = Math.round(y + thumbnailHeight),
+                roundedVScale = (y2 - y1) / portholeHeight;
+            // reset x.
+            x = rtl ? contentBox.x1 : contentBox.x2 - thumbnailsWidth;
             for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
-                thumbnail = this._thumbnails[i];
-
-                // NOTE: original ThumbnailsBox does a lot of intricate calcul-
-                // ations to do with rounding to make sure everything's evenly
-                // spaced; we don't bother because I'm not smart enough to work
-                // it out (so the spacing on the left might be a few pixels
-                // more than that on the right).
-                let x1 = x,
-                    y1 = y;
-
-                if (thumbnail.slidePosition !== 0) {
-                    if (rtl) {
-                        x1 -= slideOffset * thumbnail.slidePosition;
-                    } else {
-                        x1 += slideOffset * thumbnail.slidePosition;
-                    }
-                }
-
-                if (i === this._dropPlaceholderPos) {
-                    if (this._dropPlaceholderHorizontal) {
-                        let [minHeight, placeholderHeight] =
-                            this._dropPlaceholder.get_preferred_height(-1);
-                        childBox.x1 = x1;
-                        childBox.x2 = x1 + thumbnailWidth;
-                        childBox.y1 = y;
-                        childBox.y2 = y + placeholderHeight;
-
-                        y1 += placeholderHeight + spacing;
-                    } else {
-                        let [minWidth, placeholderWidth] =
-                            this._dropPlaceholder.get_preferred_width(-1);
-                        childBox.x1 = x1;
-                        childBox.x2 = x1 + placeholderWidth;
-                        childBox.y1 = y;
-                        childBox.y2 = y + thumbnailHeight;
-
-                        x += placeholderWidth + spacing;
-                        x1 += placeholderWidth + spacing;
-                    }
+/*
+                if (i == this._dropPlaceholderPos) {
+                    let [minHeight, placeholderHeight] = this._dropPlaceholder.get_preferred_height(-1);
+                    childBox.x1 = x1;
+                    childBox.x2 = x1 + thumbnailWidth;
+                    childBox.y1 = Math.round(y);
+                    childBox.y2 = Math.round(y + placeholderHeight);
                     this._dropPlaceholder.allocate(childBox, flags);
-                    Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this,
-                        function () {
-                            this._dropPlaceholder.show();
-                        }));
+                    Meta.later_add(Meta.LaterType.BEFORE_REDRAW, Lang.bind(this, function() {
+                        this._dropPlaceholder.show();
+                    }));
+                    y += placeholderHeight + spacing;
+                }
+*/
+                let thumbnail = this._thumbnails[i];
+                let x1 = Math.round(x),
+                    x2 = Math.round(x + thumbnailWidth),
+                    roundedHScale = (x2 - x1) / portholeWidth;
+
+                if (thumbnail.metaWorkspace == indicatorWorkspace) {
+                    indicatorY1 = y1;
+                    indicatorY2 = y2;
                 }
 
-                if (thumbnail.metaWorkspace === indicatorWorkspace) {
-                    indicatorY = y1;
-                    indicatorX = x1;
-                }
-
-                // Allocating a scaled actor is funny - x1/y1 correspond to the
-                // origin of the actor, but x2/y2 are increased by the unscaled
-                // size.
+                // Allocating a scaled actor is funny - x1/y1 correspond to the origin
+                // of the actor, but x2/y2 are increased by the *unscaled* size.
                 childBox.x1 = x1;
                 childBox.x2 = x1 + portholeWidth;
                 childBox.y1 = y1;
@@ -1034,32 +1032,25 @@ const ThumbnailsBox = new Lang.Class({
                 thumbnail.actor.set_scale(roundedHScale, roundedVScale);
                 thumbnail.actor.allocate(childBox, flags);
 
-                x += thumbnailWidth - thumbnailWidth *
-                    thumbnail.collapseFraction;
-
-                // add spacing
-                x += spacing - thumbnail.collapseFraction * spacing;
-
+                x += thumbnailWidth + spacing;
                 ++i;
-                if (i >= MAX_WORKSPACES) {
-                    break;
-                }
-            }
-            y += thumbnailHeight - thumbnailHeight * thumbnail.collapseFraction;
-            // add spacing
-            y += spacing - thumbnail.collapseFraction * spacing;
-
-            if (i >= MAX_WORKSPACES) {
-                break;
-            }
+            } // col loop
+            y += thumbnailHeight + spacing;
+        } // row loop
+/*(
+       if (rtl) {
+            childBox.x1 = contentBox.x1;
+            childBox.x2 = contentBox.x1 + thumbnailWidth;
+        } else {
+            childBox.x1 = contentBox.x2 - thumbnailWidth;
+            childBox.x2 = contentBox.x2;
         }
-
-        // allocate the indicator (which tells us what is the current workspace)
-        childBox.x1 = indicatorX;
-        childBox.x2 = indicatorX + thumbnailWidth;
-        childBox.y1 = indicatorY;
-        childBox.y2 = indicatorY + thumbnailHeight;
+        childBox.x1 -= indicatorLeftFullBorder;
+        childBox.x2 += indicatorRightFullBorder;
+        childBox.y1 = indicatorY1 - indicatorTopFullBorder;
+        childBox.y2 = (indicatorY2 ? indicatorY2 : (indicatorY1 + thumbnailHeight)) + indicatorBottomFullBorder;
         this._indicator.allocate(childBox, flags);
+        */
     },
 
     destroy: function () {
