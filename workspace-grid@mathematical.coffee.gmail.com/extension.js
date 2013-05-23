@@ -901,8 +901,6 @@ const ThumbnailsBox = new Lang.Class({
             dropPlaceholderPosY2;
 
         // TODO: rtl.
-        // TODO: what if there are 36 rows 1 column? do I get tiny workspaces?
-
         // Note: in theory I don't have to worry about the collapseFraction/slidePosition
         // stuff because since the number of workspaces is static, thumbnails
         // will never end up sliding in/out or collapsing
@@ -1002,9 +1000,7 @@ function refreshThumbnailsBox() {
         return;
     }
     // get the thumbnailsbox to re-allocate itself
-    // (TODO: for some reason the *first* overview show won't respect this but
-    // subsequent ones will).
-    // @@Main.overview._thumbnailsBox.actor.queue_relayout();
+    Main.overview._thumbnailsBox.actor.queue_relayout();
     Main.overview._controls._thumbnailsSlider.actor.queue_relayout();
 }
 
@@ -1127,7 +1123,6 @@ function overrideWorkspaceDisplay() {
 
     // 3. Patch updateAlwaysZoom (now a function in OverviewControls as opposed
     //    to a property of workspaceDisplay)
-    // TODO: The sliding is broken. Must check `allocate`.
     tbStorage._getAlwaysZoomOut = OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut;
     OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut = function () {
         // *Always* show the pager when hovering or during a drag, regardless of width.
