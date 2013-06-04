@@ -85,6 +85,9 @@ The relevant settings:
 ---
 
 # Changelog
+**Version 1.2.1** (on extensions.gnome.org: v14 (GNOME 3.6)):
+
+* Fixed a bug where attempting to move to the left workspace in the overview would move up instead (oops! #4)
 
 **Version 1.2 (23-05-2013)** (on extensions.gnome.org: v10 (GNOME 3.2), v11 (GNOME 3.4), v12 (GNOME 3.6), v13 (GNOME 3.8)):
 
