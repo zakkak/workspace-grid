@@ -504,7 +504,7 @@ function overrideKeybindingsAndPopup() {
             if (!Main.sessionMode.hasWorkspaces) {
                 return false;
             }
-            Main.wm.actionMoveWorkspace(Meta.MotionDirection.UP);
+            Main.wm.actionMoveWorkspace(Meta.MotionDirection.LEFT);
             return true;
         case Meta.KeyBindingAction.WORKSPACE_RIGHT:
             if (!Main.sessionMode.hasWorkspaces) {
