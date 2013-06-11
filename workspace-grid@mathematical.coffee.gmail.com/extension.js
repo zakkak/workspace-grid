@@ -874,7 +874,7 @@ const ThumbnailsBox = new Lang.Class({
             indicatorY2,
             indicatorX2,
         // when not animating, the workspace position overrides this._indicatorY
-            indicatorWorkspace = !this._animatingIndicator ? global.screen.get_active_workspace() : null;
+            indicatorWorkspace = !this._animatingIndicator ? global.screen.get_active_workspace() : null,
             indicatorThemeNode = this._indicator.get_theme_node(),
 
             indicatorTopFullBorder = indicatorThemeNode.get_padding(St.Side.TOP) + indicatorThemeNode.get_border_width(St.Side.TOP),
