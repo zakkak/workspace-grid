@@ -996,7 +996,7 @@ function refreshThumbnailsBox() {
         return;
     }
     // get the thumbnailsbox to re-allocate itself
-    Main.overview._thumbnailsBox.actor.queue_relayout();
+    Main.overview._controls._thumbnailsBox.actor.queue_relayout();
     Main.overview._controls._thumbnailsSlider.actor.queue_relayout();
 }
 
@@ -1009,7 +1009,7 @@ function refreshThumbnailsBox() {
  */
 function _replaceThumbnailsBoxActor (actorCallbackObject) {
     let slider = Main.overview._controls._thumbnailsSlider,
-        thumbnailsBox = Main.overview._thumbnailsBox;
+        thumbnailsBox = Main.overview._controls._thumbnailsBox;
 
     // kill the old actor
     slider.actor.remove_actor(thumbnailsBox.actor);
@@ -1099,7 +1099,7 @@ function overrideWorkspaceDisplay() {
 
     // replace thumbnailsBox.actor with a new one
     let MyTBProto = ThumbnailsBox.prototype,
-        thumbnailsBox = Main.overview._thumbnailsBox;
+        thumbnailsBox = Main.overview._controls._thumbnailsBox;
 
     _replaceThumbnailsBoxActor(MyTBProto);
 
@@ -1141,8 +1141,8 @@ function overrideWorkspaceDisplay() {
         }
 
         // always zoom out if we are not too wide
-        if (!alwaysZoomOut && Main.overview._thumbnailsBox.actor.mapped) {
-            alwaysZoomOut = Main.overview._thumbnailsBox.actor.width <=
+        if (!alwaysZoomOut && Main.overview._controls._thumbnailsBox.actor.mapped) {
+            alwaysZoomOut = Main.overview._controls._thumbnailsBox.actor.width <=
                             (Main.layoutManager.primaryMonitor.width *
                              settings.get_double(KEY_MAX_HFRACTION_COLLAPSE));
         }
@@ -1178,7 +1178,7 @@ function unoverrideWorkspaceDisplay() {
     delete TBProto.indicatorX; // remove the getter/setter
     // replace the actor
     _replaceThumbnailsBoxActor(TBProto);
-    let thumbnailsBox = Main.overview._thumbnailsBox;
+    let thumbnailsBox = Main.overview._controls._thumbnailsBox;
     thumbnailsBox._dropPlaceholder.style_class = 'placeholder';
     delete thumbnailsBox._indicatorX;
     delete thumbnailsBox._maxHscale;
@@ -1275,7 +1275,7 @@ function makeWorkspacesStatic() {
     Main._queueCheckWorkspaces = dummy;
     Main._checkWorkspaces = dummy;
 
-    Main._workspaces.forEach(function (workspace) {
+    Main.wm._workspaceTracker._workspaces.forEach(function (workspace) {
             workspace.disconnect(workspace._windowAddedId);
             workspace.disconnect(workspace._windowRemovedId);
             workspace._lastRemovedWindow = null;
@@ -1288,7 +1288,7 @@ function unmakeWorkspacesStatic() {
     Main._queueCheckWorkspaces = staticWorkspaceStorage._queueCheckWorkspaces;
     Main._checkWorkspaces = staticWorkspaceStorage._checkWorkspaces;
 
-    Main._workspaces = [];
+    Main.wm._workspaceTracker._workspaces = [];
 
     // recalculate new number of workspaces.
     Main._nWorkspacesChanged();
