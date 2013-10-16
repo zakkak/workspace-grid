@@ -583,9 +583,9 @@ const ThumbnailsBox = new Lang.Class({
         // around the final size not the animating size. So instead we fake the background with
         // an actor underneath the content and adjust the allocation of our children to leave space
         // for the border and padding of the background actor.
-        this._background = new St.Bin({ style_class: 'workspace-thumbnails-background' });
+//        this._background = new St.Bin({ style_class: 'workspace-thumbnails-background' });
 
-        this.actor.add_actor(this._background);
+//        this.actor.add_actor(this._background);
 
         let indicator = new St.Bin({ style_class: 'workspace-thumbnail-indicator' });
 
@@ -755,7 +755,7 @@ const ThumbnailsBox = new Lang.Class({
      * start the thumbnails box collapsed.
      **/
     _getPreferredHeight: function (actor, forWidth, alloc) {
-        let themeNode = this._background.get_theme_node();
+        let themeNode = this.actor.get_theme_node();
         //forWidth = themeNode.adjust_for_width(forWidth);
 
         if (this._thumbnails.length === 0) {
@@ -778,7 +778,7 @@ const ThumbnailsBox = new Lang.Class({
             return;
         }
 
-        let themeNode = this._background.get_theme_node(),
+        let themeNode = this.actor.get_theme_node(),
             spacing = this.actor.get_theme_node().get_length('spacing'),
             nRows = global.screen.workspace_grid.rows,
             nCols = global.screen.workspace_grid.columns,
@@ -811,7 +811,7 @@ const ThumbnailsBox = new Lang.Class({
         let rtl = (Clutter.get_default_text_direction () == Clutter.TextDirection.RTL);
 
         // See comment about this._background in _init()
-        let themeNode = this._background.get_theme_node();
+        let themeNode = this.actor.get_theme_node();
         let contentBox = themeNode.get_content_box(box);
 
         if (this._thumbnails.length == 0) // not visible
@@ -867,7 +867,7 @@ const ThumbnailsBox = new Lang.Class({
         }
         childBox.y1 = box.y1;
         childBox.y2 = box.y2;
-        this._background.allocate(childBox, flags);
+//        this._background.allocate(childBox, flags);
 
         let indicatorY1 = this._indicatorY,
             indicatorX1 = this._indicatorX,
@@ -1025,7 +1025,7 @@ function _replaceThumbnailsBoxActor (actorCallbackObject) {
         this.actor.connect('allocate', Lang.bind(this, patch._allocate));
         this.actor._delegate = this;
 
-        this.actor.add_actor(this._background);
+//        this.actor.add_actor(this._background);
         this.actor.add_actor(this._indicator);
         this.actor.add_actor(this._dropPlaceholder);
 
