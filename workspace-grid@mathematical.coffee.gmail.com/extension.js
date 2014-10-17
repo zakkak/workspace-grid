@@ -545,7 +545,9 @@ function unoverrideKeybindingsAndPopup() {
 // GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
 // GNOME 3.6, 3.8: Main.overview._viewSelector._workspacesDisplay
 function _getWorkspaceDisplay() {
-    return Main.overview._workspacesDisplay || Main.overview._viewSelector._workspacesDisplay;
+    return Main.overview._workspacesDisplay ||
+        Main.overview.viewSelector._workspacesDisplay  ||
+        Main.overview._viewSelector._workspacesDisplay;
 }
 
 /******************
@@ -1205,7 +1207,7 @@ function modifyNumWorkspaces() {
      * To *actually* increase/decrease the number of workspaces (to fire
      * notify::n-workspaces), we must use global.screen.append_new_workspace and
      * global.screen.remove_workspace.
-     *   
+     *
      * We could just set org.gnome.shell.overrides.dynamic-workspaces to false
      * but then we can't drag and drop windows between workspaces (supposedly a
      * GNOME 3.4 bug, see the Frippery Static Workspaces extension. Can confirm
