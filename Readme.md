@@ -150,13 +150,21 @@ extension overrides are:
 
 # For developers wanting to improve this extension:
 
-* The 'gnome3.2' branch is only compatible with GNOME 3.2. It's meant to be stable.
-* The 'gnome3.4' branch is only compatible with GNOME 3.4 - things like keybinding names have changed since GNOME 3.2. It's meant to be stable.
-* The 'gnome3.6' branch is only compatible with GNOME 3.6. It's meant to be stable.
-* The 'gnome3.8' branch is only compatible with GNOME 3.8. It's meant to be stable [16/05/2013: not yet working]
-* The 'gnome3.10' branch is only compatible with GNOME 3.10. It's meant to be stable.
-* The 'gnome3.12' branch is only compatible with GNOME 3.12. It's meant to be stable.
-* The 'gnome3.14' branch is only compatible with GNOME 3.14. It's meant to be stable.
+* The 'gnome3.14' branch is only compatible with GNOME 3.14. It's
+  still young.
+* The 'gnome3.12' branch is only compatible with GNOME 3.12. It's
+  meant to be stable.
+* The 'gnome3.10' branch is only compatible with GNOME 3.10. It's
+  meant to be stable.
+* The 'gnome3.8' branch is only compatible with GNOME 3.8. It's meant
+  to be stable [16/05/2013: not yet working]
+* The 'gnome3.6' branch is only compatible with GNOME 3.6. It's meant
+  to be stable.
+* The 'gnome3.4' branch is only compatible with GNOME 3.4 - things
+  like keybinding names have changed since GNOME 3.2. It's meant to be
+  stable.
+* The 'gnome3.2' branch is only compatible with GNOME 3.2. It's meant
+  to be stable.
 * The 'default' branch is currently essentially the 3.2 branch...
 
 ## Known issues
@@ -165,4 +173,9 @@ From GNOME 3.4+ to keep workspaces static we can just adjust some settings:
 * `org.gnome.shell.overrides.dynamic-workspaces` to `false`
 * `org.gnome.desktop.wm.preferences.num-workspaces` to the number of workspaces
 
-However then you can't drag/drop applications between workspaces (GNOME 3.4/3.6 anyway), so instead of doing that we make use of the Frippery Static Workspace code.
+However then you can't drag/drop applications between workspaces
+(GNOME 3.4/3.6 anyway), so instead of doing that we make use of the
+Frippery Static Workspace code.
+
+In Gnome 3.14 drag/drop is not working both in dynamic and static
+setup, so we dropped the Flippery Static Workspace code.
