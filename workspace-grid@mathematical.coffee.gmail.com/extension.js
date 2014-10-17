@@ -1262,39 +1262,41 @@ function unmodifyNumWorkspaces() {
 /******************
  * This is the stuff from Frippery Static Workspaces
  ******************/
-function dummy() {
-    return false;
-}
+// In GNOME 3.6 and above it's possible to turn off dynamic workspaces
+// using GNOME Tweak Tool or the right-click menu of the Frippery
+// Bottom Panel extension. Hence this extension has been dropped.
 
-function makeWorkspacesStatic() {
-    /// storage
-    staticWorkspaceStorage._nWorkspacesChanged = Main._nWorkspacesChanged;
-    staticWorkspaceStorage._queueCheckWorkspaces = Main._queueCheckWorkspaces;
-    staticWorkspaceStorage._checkWorkspaces = Main._checkWorkspaces;
+// function dummy() { return false; }
 
-    /// patching
-    Main._nWorkspacesChanged = dummy;
-    Main._queueCheckWorkspaces = dummy;
-    Main._checkWorkspaces = dummy;
+// function makeWorkspacesStatic() {
+//     /// storage
+//     staticWorkspaceStorage._nWorkspacesChanged = Main._nWorkspacesChanged;
+//     staticWorkspaceStorage._queueCheckWorkspaces = Main._queueCheckWorkspaces;
+//     staticWorkspaceStorage._checkWorkspaces = Main._checkWorkspaces;
 
-    Main.wm._workspaceTracker._workspaces.forEach(function (workspace) {
-            workspace.disconnect(workspace._windowAddedId);
-            workspace.disconnect(workspace._windowRemovedId);
-            workspace._lastRemovedWindow = null;
-        });
-}
+//     /// patching
+//     Main._nWorkspacesChanged = dummy;
+//     Main._queueCheckWorkspaces = dummy;
+//     Main._checkWorkspaces = dummy;
 
-function unmakeWorkspacesStatic() {
-    // undo make workspaces static
-    Main._nWorkspacesChanged = staticWorkspaceStorage._nWorkspacesChanged;
-    Main._queueCheckWorkspaces = staticWorkspaceStorage._queueCheckWorkspaces;
-    Main._checkWorkspaces = staticWorkspaceStorage._checkWorkspaces;
+//     Main.wm._workspaceTracker._workspaces.forEach(function (workspace) {
+//             workspace.disconnect(workspace._windowAddedId);
+//             workspace.disconnect(workspace._windowRemovedId);
+//             workspace._lastRemovedWindow = null;
+//         });
+// }
 
-    Main.wm._workspaceTracker._workspaces = [];
+// function unmakeWorkspacesStatic() {
+//     // undo make workspaces static
+//     Main._nWorkspacesChanged = staticWorkspaceStorage._nWorkspacesChanged;
+//     Main._queueCheckWorkspaces = staticWorkspaceStorage._queueCheckWorkspaces;
+//     Main._checkWorkspaces = staticWorkspaceStorage._checkWorkspaces;
 
-    // recalculate new number of workspaces.
-    Main._nWorkspacesChanged();
-}
+//     Main.wm._workspaceTracker._workspaces = [];
+
+//     // recalculate new number of workspaces.
+//     Main._nWorkspacesChanged();
+// }
 
 /******************
  * Store rows/cols of workspaces, convenience functions to
@@ -1360,7 +1362,7 @@ function enable() {
     nWorkspaces = Meta.prefs_get_num_workspaces();
 
     settings = Convenience.getSettings();
-    makeWorkspacesStatic();
+//    makeWorkspacesStatic();
     exportFunctionsAndConstants(); // so other extension authors can use.
     overrideKeybindingsAndPopup();
     overrideWorkspaceDisplay();
@@ -1390,7 +1392,7 @@ function disable() {
     unoverrideKeybindingsAndPopup();
     unmodifyNumWorkspaces();
     unexportFunctionsAndConstants();
-    unmakeWorkspacesStatic();
+//    unmakeWorkspacesStatic();
 
     let i = signals.length;
     while (i--) {
