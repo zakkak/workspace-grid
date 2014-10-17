@@ -16,8 +16,8 @@ Note - if you use a bottom panel, [Frippery Bottom Panel](https://extensions.gno
 | ![Workspace switcher](http://cdn.bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension/downloads/workspace-switcher.png) | ![Workspace thumbnails](http://cdn.bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension/downloads/workspace-thumbnails.png) |
 
 Written 2012 by mathematical.coffee [mathematical.coffee@gmail.com](mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question).   
-Project webpage: [at bitbucket](https://bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension).  
-Report bugs: [on the Issues page at bitbucket](https://bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension/issues).
+Project webpage: [at github](https://github.com/zakkak/workspace-grid-gnome-shell-extension).  
+Report bugs: [on the Issues page at github](https://github.com/zakkak/workspace-grid-gnome-shell-extension/issues).
 
 
 ## Other relevant extensions
@@ -41,17 +41,13 @@ Let me know of similar extensions to add to this list.
 
 # Installation
 
-Available from [extensions.gnome.org](https://extensions.gnome.org/extension/484/workspace-grid/)
-
-Otherwise:
-
-1. Download the .zip file on the [Downloads page](https://bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension/downloads).
+1. Download the .zip file on the [Downloads page](https://github.com/zakkak/workspace-grid-gnome-shell-extension/releases).
 2. Open `gnome-tweak-tool`, go to "Shell Extensions", "Install Extension" and select the .zip file.
 
 # Configuration
 
 On GNOME 3.2: edit `extension.js` and restart.  
-On GNOME 3.4: use `gnome-shell-extension-prefs`.
+On GNOME >=3.4: use `gnome-shell-extension-prefs`.
 
 Things that can be configured (along with code snippet for GNOME 3.2 people):
 
@@ -81,18 +77,6 @@ The relevant settings:
 * the width at which the sidebar collapses to the side when you open the overview (fraction of screen width):
 
         const MAX_SCREEN_HFRACTION_BEFORE_COLLAPSE = 0.3;
-
----
-
-# Changelog
-
-**Version 1.2 (23-05-2013)** (on extensions.gnome.org: v10 (GNOME 3.2), v11 (GNOME 3.4), v12 (GNOME 3.6), v13 (GNOME 3.8)):
-
-* Added GNOME 3.8 support
-* Added option to wraparound to the same or the next row (if wraparound is enabled);
-* Removed the ability to drop "between" a workspace to create a new on (as we have static workspaces).
-* When a thumbnail is dragged over another workspace, that workspace has a glow to indicate it is the target.
-* misc. code cleaning, particularly to do with allocating the thumbnails slidebar
 
 ---
 
@@ -168,8 +152,11 @@ extension overrides are:
 
 * The 'gnome3.2' branch is only compatible with GNOME 3.2. It's meant to be stable.
 * The 'gnome3.4' branch is only compatible with GNOME 3.4 - things like keybinding names have changed since GNOME 3.2. It's meant to be stable.
-* The 'gnome3.6' branch is only compatible with GNOME 3.6. It's mant to be stable.
-* The 'gnome3.8' branch is only compatible with GNOME 3.8. It's mant to be stable [16/05/2013: not yet working]
+* The 'gnome3.6' branch is only compatible with GNOME 3.6. It's meant to be stable.
+* The 'gnome3.8' branch is only compatible with GNOME 3.8. It's meant to be stable [16/05/2013: not yet working]
+* The 'gnome3.10' branch is only compatible with GNOME 3.10. It's meant to be stable.
+* The 'gnome3.12' branch is only compatible with GNOME 3.12. It's meant to be stable.
+* The 'gnome3.14' branch is only compatible with GNOME 3.14. It's meant to be stable.
 * The 'default' branch is currently essentially the 3.2 branch...
 
 ## Known issues
