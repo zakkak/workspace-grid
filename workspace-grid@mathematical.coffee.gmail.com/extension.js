@@ -1356,6 +1356,13 @@ function unexportFunctionsAndConstants() {
 function init() {
 }
 
+function nWorkspacesChanged() {
+    // re-export new rows/cols
+    exportFunctionsAndConstants();
+    // reset the number of workspaces
+    modifyNumWorkspaces();
+}
+
 let signals = [];
 function enable() {
     /// Storage
@@ -1378,13 +1385,6 @@ function enable() {
     signals.push(settings.connect('changed::' + KEY_COLS, nWorkspacesChanged));
     signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
     signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
-}
-
-function nWorkspacesChanged() {
-    // re-export new rows/cols
-    exportFunctionsAndConstants();
-    // reset the number of workspaces
-    modifyNumWorkspaces();
 }
 
 function disable() {
