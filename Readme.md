@@ -150,20 +150,20 @@ extension overrides are:
 
 # For developers wanting to improve this extension:
 
-* The 'gnome3.14' branch is only compatible with GNOME 3.14. It's
+* The '3.14' branch is only compatible with GNOME 3.14. It's
   still young.
-* The 'gnome3.12' branch is only compatible with GNOME 3.12. It's
+* The '3.12' branch is only compatible with GNOME 3.12. It's
   meant to be stable.
-* The 'gnome3.10' branch is only compatible with GNOME 3.10. It's
+* The '3.10' branch is only compatible with GNOME 3.10. It's
   meant to be stable.
-* The 'gnome3.8' branch is only compatible with GNOME 3.8. It's meant
+* The '3.8' branch is only compatible with GNOME 3.8. It's meant
   to be stable [16/05/2013: not yet working]
-* The 'gnome3.6' branch is only compatible with GNOME 3.6. It's meant
+* The '3.6' branch is only compatible with GNOME 3.6. It's meant
   to be stable.
-* The 'gnome3.4' branch is only compatible with GNOME 3.4 - things
+* The '3.4' branch is only compatible with GNOME 3.4 - things
   like keybinding names have changed since GNOME 3.2. It's meant to be
   stable.
-* The 'gnome3.2' branch is only compatible with GNOME 3.2. It's meant
+* The '3.2' branch is only compatible with GNOME 3.2. It's meant
   to be stable.
 * The 'default' branch is currently essentially the 3.2 branch...
 
