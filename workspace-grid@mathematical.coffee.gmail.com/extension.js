@@ -163,6 +163,15 @@ const BindingToDirection = {
  * (MAX_REASONABLE_WORKSPACES in mutter/src/core/prefs.c)
  */
 const MAX_WORKSPACES = 36;
+const genBindings = function(prefix, count) {
+    let bindings = [];
+    for (let i = 1; i <= count; i++) {
+        bindings.push(prefix + i);
+    }
+    return bindings;
+}
+const SwitchBindings = genBindings('switch-to-workspace-', MAX_WORKSPACES);
+const MoveBindings = genBindings('move-to-workspace-', MAX_WORKSPACES);
 
 /* Import some constants from other files and also some laziness */
 const MAX_THUMBNAIL_SCALE = WorkspaceThumbnail.MAX_THUMBNAIL_SCALE;
@@ -461,19 +470,24 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
     if (global.screen.n_workspaces === 1)
         return;
 
-    let direction = BindingToDirection[binding.get_name()],
+    let bindingName = binding.get_name(),
+        /* Workspace index is the end of the binding name minus one
+         * E.g switch-to-workspace-5 should map to wsIndex of 4
+         */
+        wsIndex = parseInt(bindingName.substr(bindingName.lastIndexOf("-") + 1)) - 1,
+        destination = BindingToDirection[bindingName] || wsIndex,
         to;
-    if (binding.get_name().substr(0, 5) === 'move-') {
+    if (bindingName.substr(0, 5) === 'move-') {
         // we've patched this
-        to = Main.wm.actionMoveWindow(window, direction);
+        to = Main.wm.actionMoveWindow(window, destination);
     } else {
         // we've patched this
-        to = Main.wm.actionMoveWorkspace(direction);
+        to = Main.wm.actionMoveWorkspace(destination);
     }
 
     // show workspace switcher
     if (!Main.overview.visible) {
-        getWorkspaceSwitcherPopup().display(direction, to.index());
+        getWorkspaceSwitcherPopup().display(destination, to.index());
     }
 }
 
@@ -485,7 +499,7 @@ function overrideKeybindingsAndPopup() {
     // note - we could simply replace Main.wm._workspaceSwitcherPopup and
     // not bother with taking over the keybindings, if not for the 'wraparound'
     // stuff.
-    let bindings = Object.keys(BindingToDirection);
+    let bindings = Object.keys(BindingToDirection).concat(SwitchBindings).concat(MoveBindings);
     for (let i = 0; i < bindings.length; ++i) {
         Main.wm.setCustomKeybindingHandler(bindings[i],
                                            Shell.KeyBindingMode.NORMAL |
@@ -496,9 +510,10 @@ function overrideKeybindingsAndPopup() {
     // Override imports.ui.windowManager.actionMove* just in case other
     // extensions use them.
     wmStorage.actionMoveWorkspace = WMProto.actionMoveWorkspace;
-    WMProto.actionMoveWorkspace = function (direction) {
+    WMProto.actionMoveWorkspace = function (destination) {
         let from = global.screen.get_active_workspace_index(),
-            to = calculateWorkspace(direction,
+            // destination >= 0 is workspace index, otherwise its a direction
+            to = destination >= 0 ? destination : calculateWorkspace(destination,
                     settings.get_boolean(KEY_WRAPAROUND),
                     settings.get_boolean(KEY_WRAP_TO_SAME)),
             ws = global.screen.get_workspace_by_index(to);
@@ -509,8 +524,9 @@ function overrideKeybindingsAndPopup() {
         return ws;
     };
     wmStorage.actionMoveWindow = WMProto.actionMoveWindow;
-    WMProto.actionMoveWindow = function (window, direction) {
-        let to = calculateWorkspace(direction,
+    WMProto.actionMoveWindow = function (window, destination) {
+        // destination >= 0 is workspace index, otherwise its a direction
+        let to = destination >= 0 ? destination : calculateWorkspace(destination,
                 settings.get_boolean(KEY_WRAPAROUND),
                 settings.get_boolean(KEY_WRAP_TO_SAME)),
             ws = global.screen.get_workspace_by_index(to);
@@ -527,7 +543,7 @@ function overrideKeybindingsAndPopup() {
 
 /* Restore the original keybindings */
 function unoverrideKeybindingsAndPopup() {
-    let bindings = Object.keys(BindingToDirection);
+    let bindings = Object.keys(BindingToDirection).concat(SwitchBindings).concat(MoveBindings);
     for (let i = 0; i < bindings.length; ++i) {
         Main.wm.setCustomKeybindingHandler(bindings[i],
                                                Shell.KeyBindingMode.NORMAL |
