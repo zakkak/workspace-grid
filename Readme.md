@@ -150,8 +150,10 @@ extension overrides are:
 
 # For developers wanting to improve this extension:
 
-* The '3.14' branch is only compatible with GNOME 3.14. It's
+* The '3.16' branch is only compatible with GNOME 3.16. It's
   still young.
+* The '3.14' branch is only compatible with GNOME 3.14. It's
+  meant to be stable.
 * The '3.12' branch is only compatible with GNOME 3.12. It's
   meant to be stable.
 * The '3.10' branch is only compatible with GNOME 3.10. It's

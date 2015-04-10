@@ -502,8 +502,8 @@ function overrideKeybindingsAndPopup() {
     let bindings = Object.keys(BindingToDirection).concat(SwitchBindings).concat(MoveBindings);
     for (let i = 0; i < bindings.length; ++i) {
         Main.wm.setCustomKeybindingHandler(bindings[i],
-                                           Shell.KeyBindingMode.NORMAL |
-                                           Shell.KeyBindingMode.OVERVIEW,
+                                           Shell.ActionMode.NORMAL |
+                                           Shell.ActionMode.OVERVIEW,
                                            showWorkspaceSwitcher);
 	}
 
@@ -546,8 +546,8 @@ function unoverrideKeybindingsAndPopup() {
     let bindings = Object.keys(BindingToDirection).concat(SwitchBindings).concat(MoveBindings);
     for (let i = 0; i < bindings.length; ++i) {
         Main.wm.setCustomKeybindingHandler(bindings[i],
-                                               Shell.KeyBindingMode.NORMAL |
-                                               Shell.KeyBindingMode.OVERVIEW,
+                                               Shell.ActionMode.NORMAL |
+                                               Shell.ActionMode.OVERVIEW,
                                                Lang.bind(Main.wm,
                                                    Main.wm._showWorkspaceSwitcher));
     }
