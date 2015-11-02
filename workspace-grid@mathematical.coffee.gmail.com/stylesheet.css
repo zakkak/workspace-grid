@@ -1,15 +1,44 @@
+.workspace-switcher {
+    background: transparent;
+    border: 0px;
+    border-radius: 0px;
+    padding: 0px;
+    spacing: 8px; 
+}
+
+.workspace-switcher-group {
+    padding: 10px;
+}
+
+.workspace-switcher-container {
+    background: transparent;
+    background-color: rgba(0, 0, 0, 0.33);
+    border-image: none;
+    border-radius: 8px;
+    padding: 10px;
+}
+
 /* Note:
- * .ws-switcher-active-{up,down} are already in the global .css so we don't
- * include them here.
- *
- * FIXME: include here for completeness/future proofing?
+ * .ws-switcher-active-{up,down} are already in the global .css so we override them here.
  */
-.ws-switcher-active-left, .ws-switcher-active-right {
-  height: 50px;
-  background-color: #215d9c;
-  color: #ffffff;
-  background-size: 32px;
-  border-radius: 8px;
+.ws-switcher-active-left,
+.ws-switcher-active-right,
+.ws-switcher-active-up,
+.ws-switcher-active-down,
+.ws-switcher-box {
+    height: 100px;
+    background-color: rgba(0, 0, 0, 0.33);
+    background-image: none;
+    border-color: rgba(0, 0, 0, 0.33);
+    border-radius: 8px;
+    border: none;
+}
+
+.ws-switcher-active-left,
+.ws-switcher-active-right,
+.ws-switcher-active-up,
+.ws-switcher-active-down {
+    background-color: rgba(32, 96, 152, 0.8);
 }
 
 .ws-switcher-label {
