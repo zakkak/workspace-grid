@@ -11,9 +11,12 @@ inspired by the [[https://extensions.gnome.org/extension/12/static-workspaces/][
 Note - if you use a bottom panel, [[https://extensions.gnome.org/extension/3/bottom-panel/][Frippery Bottom Panel]] *already has*
 workspace grid functionality!
 
-This extension Written 2012 by mathematical.coffee [[mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question][mathematical.coffee@gmail.com]].\\
-Maintained by [[https://foivos.zakkak.net][Foivos S. Zakkak]] since October, 2014.\\
-Project webpage: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension][at github]].\\
+This extension Written 2012 by [[mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question][Amy Chan]].
+
+Maintained by [[https://foivos.zakkak.net][Foivos S. Zakkak]] since October, 2014.
+
+Project webpage: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension][at github]].
+
 Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/issues][on the Issues page at github]].
 
 
