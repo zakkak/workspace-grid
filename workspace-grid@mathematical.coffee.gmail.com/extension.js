@@ -765,6 +765,23 @@ const ThumbnailsBox = new Lang.Class({
                          });
     },
 
+    _getPreferredHeight: function(actor, forWidth, alloc) {
+        // Note that for getPreferredWidth/Height we cheat a bit and skip propagating
+        // the size request to our children because we know how big they are and know
+        // that the actors aren't depending on the virtual functions being called.
+
+        this._ensurePorthole();
+        let themeNode    = this.actor.get_theme_node();
+
+        let spacing      = themeNode.get_length('spacing');
+        let nWorkspaces  = global.screen.workspace_grid.rows;
+        let totalSpacing = (nWorkspaces - 1) * spacing;
+
+        alloc.min_size     = totalSpacing;
+        alloc.natural_size = totalSpacing + nWorkspaces *
+            this._porthole.height * MAX_THUMBNAIL_SCALE;
+    },
+
     /**
      * The following are to get things to layout in a grid
      * Note: the mode is WIDTH_FOR_HEIGHT, and we make sure that the box is
@@ -772,25 +789,6 @@ const ThumbnailsBox = new Lang.Class({
      * If it is wider than MAX_SCREEN_HFRACTION_COLLAPSE then we initially
      * start the thumbnails box collapsed.
      **/
-    _getPreferredHeight: function (actor, forWidth, alloc) {
-        let themeNode = this.actor.get_theme_node();
-        //forWidth = themeNode.adjust_for_width(forWidth);
-
-        if (this._thumbnails.length === 0) {
-            return;
-        }
-
-        let spacing = this.actor.get_theme_node().get_length('spacing'),
-            nRows = global.screen.workspace_grid.rows,
-            totalSpacing = (nRows - 1) * spacing,
-            height = totalSpacing + nWorkspaces * this._porthole.height *
-                MAX_THUMBNAIL_SCALE;
-
-        [alloc.min_size, alloc.natural_size] =
-            themeNode.adjust_preferred_height(height, height);
-
-    },
-
     _getPreferredWidth: function (actor, forHeight, alloc) {
         if (this._thumbnails.length === 0) {
             return;
