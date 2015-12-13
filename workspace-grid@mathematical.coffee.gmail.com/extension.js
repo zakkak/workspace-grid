@@ -177,6 +177,9 @@ const BindingToDirection = {
 };
 /* it seems the max number of workspaces is 36
  * (MAX_REASONABLE_WORKSPACES in mutter/src/core/prefs.c)
+ *
+ * TODO: Remove the upper limit of workspaces, as it appears to not
+ * exist in newer version of Gnome
  */
 const MAX_WORKSPACES = 36;
 const genBindings = function(prefix, count) {
@@ -1288,45 +1291,6 @@ function unmodifyNumWorkspaces() {
         1 // columns
     );
 }
-
-/******************
- * This is the stuff from Frippery Static Workspaces
- ******************/
-// In GNOME 3.6 and above it's possible to turn off dynamic workspaces
-// using GNOME Tweak Tool or the right-click menu of the Frippery
-// Bottom Panel extension. Hence this extension has been dropped.
-
-// function dummy() { return false; }
-
-// function makeWorkspacesStatic() {
-//     /// storage
-//     staticWorkspaceStorage._nWorkspacesChanged = Main._nWorkspacesChanged;
-//     staticWorkspaceStorage._queueCheckWorkspaces = Main._queueCheckWorkspaces;
-//     staticWorkspaceStorage._checkWorkspaces = Main._checkWorkspaces;
-
-//     /// patching
-//     Main._nWorkspacesChanged = dummy;
-//     Main._queueCheckWorkspaces = dummy;
-//     Main._checkWorkspaces = dummy;
-
-//     Main.wm._workspaceTracker._workspaces.forEach(function (workspace) {
-//             workspace.disconnect(workspace._windowAddedId);
-//             workspace.disconnect(workspace._windowRemovedId);
-//             workspace._lastRemovedWindow = null;
-//         });
-// }
-
-// function unmakeWorkspacesStatic() {
-//     // undo make workspaces static
-//     Main._nWorkspacesChanged = staticWorkspaceStorage._nWorkspacesChanged;
-//     Main._queueCheckWorkspaces = staticWorkspaceStorage._queueCheckWorkspaces;
-//     Main._checkWorkspaces = staticWorkspaceStorage._checkWorkspaces;
-
-//     Main.wm._workspaceTracker._workspaces = [];
-
-//     // recalculate new number of workspaces.
-//     Main._nWorkspacesChanged();
-// }
 
 /******************
  * Store rows/cols of workspaces, convenience functions to
