@@ -75,7 +75,7 @@
  * -------------
  * Workspaces can be changed by the user by a number of ways, and this extension
  * aims to cover them all:
- * - keybinding (wm.setKeybindingHandler)
+ * - keybinding (wm.setCustomKeybindingHandler)
  * - keybinding with global grab in progress (e.g. in Overview/lg): see
  *    Main._globalKeyPressHandler
  * - scrolling in the overview (WorkspacesView.WorkspacesDisplay._onScrollEvent)
@@ -299,7 +299,7 @@ function calculateWorkspace(direction, wraparound, wrapToSame) {
  * direction is either UP, LEFT, RIGHT or DOWN.
  *
  * This can occur through:
- * - keybinding (wm.setKeybindingHandler)
+ * - keybinding (wm.setCustomKeybindingHandler)
  * - keybinding with global grab in progress (e.g. Overview/lg)
  * - scrolling/clicking in the overview
  * - (other extensions, e.g. navigate with up/down arrows:
