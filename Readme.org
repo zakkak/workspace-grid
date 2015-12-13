@@ -54,6 +54,10 @@ Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/is
 
 * Configuration
 
+To avoid weird re-sizing of the thumbnails-box please enable the
+extension *User themes*, as well.  *Workspace grid* currently overrides
+the css decoration to fix such behaviors.
+
   Things that can be configured:
 
   - Number of rows/columns in the workspace.
