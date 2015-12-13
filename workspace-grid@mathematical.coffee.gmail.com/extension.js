@@ -309,8 +309,7 @@ function calculateWorkspace(direction, wraparound, wrapToSame) {
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
 function moveWorkspace(direction) {
-    let newWs = global.screen.get_active_workspace().get_neighbor(direction);
-    Main.wm.actionMoveWorkspace(direction);
+    let newWs = actionMoveWorkspace(direction);
 
     // show workspace switcher
     if (!Main.overview.visible) {
@@ -487,28 +486,102 @@ const WorkspaceSwitcherPopup = new Lang.Class({
  * filter out RIGHT/LEFT actions like they do.
  */
 function showWorkspaceSwitcher(display, screen, window, binding) {
+    if (!Main.sessionMode.hasWorkspaces)
+        return;
+
     if (global.screen.n_workspaces === 1)
         return;
 
-    let bindingName = binding.get_name(),
-        /* Workspace index is the end of the binding name minus one
-         * E.g switch-to-workspace-5 should map to wsIndex of 4
-         */
-        wsIndex = parseInt(bindingName.substr(bindingName.lastIndexOf("-") + 1)) - 1,
-        destination = BindingToDirection[bindingName] || wsIndex,
-        to;
-    if (bindingName.substr(0, 5) === 'move-') {
-        // we've patched this
-        to = Main.wm.actionMoveWindow(window, destination);
+    let [action,,,target] = binding.get_name().split('-');
+    let newWs;
+    let direction;
+
+    if (action == 'move') {
+        // "Moving" a window to another workspace doesn't make sense when
+        // it cannot be unstuck, and is potentially confusing if a new
+        // workspaces is added at the start/end
+        if (window.is_always_on_all_workspaces() ||
+            (Meta.prefs_get_workspaces_only_on_primary() &&
+             window.get_monitor() != Main.layoutManager.primaryIndex))
+            return;
+    }
+
+    if (target == 'last') {
+        newWs = screen.get_workspace_by_index(screen.n_workspaces - 1);
+    } else if (isNaN(target)) {
+        // Prepend a new workspace dynamically
+        if (screen.get_active_workspace_index() == 0 &&
+            action == 'move' && (target == 'up' || target == 'left')) {
+            Main.wm.insertWorkspace(0);
+        }
+
+        direction = Meta.MotionDirection[target.toUpperCase()];
+    } else if (target > 0) {
+        target--;
+        newWs = screen.get_workspace_by_index(target);
+    }
+
+    if (newWs != null) {
+        if (action == 'switch') {
+            Main.wm.actionMoveWorkspace(newWs);
+        } else {
+            Main.wm.actionMoveWindow(window, newWs);
+        }
+        // Use dummy direction
+        direction = Meta.MotionDirection.UP;
     } else {
-        // we've patched this
-        to = Main.wm.actionMoveWorkspace(destination);
+        if (action == 'switch') {
+            newWs = actionMoveWorkspace(direction);
+        } else {
+            newWs = actionMoveWindow(window, direction);
+        }
     }
 
     // show workspace switcher
     if (!Main.overview.visible) {
-        getWorkspaceSwitcherPopup().display(destination, to.index());
+        getWorkspaceSwitcherPopup().display(direction, newWs.index());
     }
+}
+
+function actionMoveWorkspace(destination) {
+    let from = global.screen.get_active_workspace_index();
+
+    let to;
+    // destination >= 0 is workspace index, otherwise its a direction
+    if (destination >= 0)
+        to = destination;
+    else
+        to = calculateWorkspace(destination,
+                                settings.get_boolean(KEY_WRAPAROUND),
+                                settings.get_boolean(KEY_WRAP_TO_SAME));
+
+    let ws = global.screen.get_workspace_by_index(to);
+
+    if (to !== from) {
+        ws.activate(global.get_current_time());
+    }
+    return ws;
+}
+
+function actionMoveWindow(window, destination) {
+    let to;
+    // destination >= 0 is workspace index, otherwise its a direction
+    if (destination >= 0)
+        to = destination;
+    else
+        to = calculateWorkspace(destination,
+                                settings.get_boolean(KEY_WRAPAROUND),
+                                settings.get_boolean(KEY_WRAP_TO_SAME));
+
+    let ws = global.screen.get_workspace_by_index(to);
+
+    if (to !== global.screen.get_active_workspace_index()) {
+        Main.wm._movingWindow = window;
+        window.change_workspace(ws);
+        global.display.clear_mouse_mode();
+        ws.activate_with_focus(window, global.get_current_time());
+    }
+    return ws;
 }
 
 /******************
@@ -526,39 +599,6 @@ function overrideKeybindingsAndPopup() {
                                            Shell.ActionMode.OVERVIEW,
                                            showWorkspaceSwitcher);
 	}
-
-    // Override imports.ui.windowManager.actionMove* just in case other
-    // extensions use them.
-    wmStorage.actionMoveWorkspace = WMProto.actionMoveWorkspace;
-    WMProto.actionMoveWorkspace = function (destination) {
-        let from = global.screen.get_active_workspace_index(),
-            // destination >= 0 is workspace index, otherwise its a direction
-            to = destination >= 0 ? destination : calculateWorkspace(destination,
-                    settings.get_boolean(KEY_WRAPAROUND),
-                    settings.get_boolean(KEY_WRAP_TO_SAME)),
-            ws = global.screen.get_workspace_by_index(to);
-
-        if (to !== from) {
-            ws.activate(global.get_current_time());
-        }
-        return ws;
-    };
-    wmStorage.actionMoveWindow = WMProto.actionMoveWindow;
-    WMProto.actionMoveWindow = function (window, destination) {
-        // destination >= 0 is workspace index, otherwise its a direction
-        let to = destination >= 0 ? destination : calculateWorkspace(destination,
-                settings.get_boolean(KEY_WRAPAROUND),
-                settings.get_boolean(KEY_WRAP_TO_SAME)),
-            ws = global.screen.get_workspace_by_index(to);
-
-        if (to !== global.screen.get_active_workspace_index()) {
-            Main.wm._movingWindow = window;
-            window.change_workspace(ws);
-            global.display.clear_mouse_mode();
-            ws.activate_with_focus(window, global.get_current_time());
-        }
-        return ws;
-    };
 }
 
 /* Restore the original keybindings */
@@ -573,9 +613,6 @@ function unoverrideKeybindingsAndPopup() {
     }
 
     _workspaceSwitcherPopup = null;
-
-    WMProto.actionMoveWorkspace = wmStorage.actionMoveWorkspace;
-    WMProto.actionMoveWindow = wmStorage.actionMoveWindow;
 }
 
 // GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
@@ -1101,10 +1138,10 @@ function overrideWorkspaceDisplay() {
                     return false;
                 switch (event.get_scroll_direction()) {
                 case Clutter.ScrollDirection.LEFT:
-                    Main.wm.actionMoveWorkspace(LEFT);
+                    global.screen.workspace_grid.actionMoveWorkspace(LEFT);
                     return true;
                 case Clutter.ScrollDirection.RIGHT:
-                    Main.wm.actionMoveWorkspace(RIGHT);
+                    global.screen.workspace_grid.actionMoveWorkspace(RIGHT);
                     return true;
                 }
                 return false;
@@ -1319,7 +1356,9 @@ function exportFunctionsAndConstants() {
         indexToRowCol: indexToRowCol,
         getWorkspaceSwitcherPopup: getWorkspaceSwitcherPopup,
         calculateWorkspace: calculateWorkspace,
-        moveWorkspace: moveWorkspace
+        moveWorkspace: moveWorkspace,
+        actionMoveWorkspace: actionMoveWorkspace,
+        actionMoveWindow: actionMoveWindow
     };
 
     // It seems you can only have 36 workspaces max.
