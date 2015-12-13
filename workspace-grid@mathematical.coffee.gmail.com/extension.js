@@ -309,11 +309,12 @@ function calculateWorkspace(direction, wraparound, wrapToSame) {
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
 function moveWorkspace(direction) {
+    let newWs = global.screen.get_active_workspace().get_neighbor(direction);
     Main.wm.actionMoveWorkspace(direction);
 
     // show workspace switcher
     if (!Main.overview.visible) {
-        getWorkspaceSwitcherPopup().display(direction, to);
+        getWorkspaceSwitcherPopup().display(direction, newWs.index());
     }
 }
 
