@@ -37,15 +37,12 @@
  * must be enabled for this all to work. global.screen.workspace_grid contains:
  *
  *   (Exported Constants)
- *   - Directions = { UP, LEFT, RIGHT, DOWN } : directions for navigating (see
- *                                              moveWorkspaces further down)
- *     (NOTE: for 3.6+ you can just use Meta.MotionDirection.{UP,LEFT,RIGHT,DOWN})
  *   - rows     : number of rows of workspaces
  *   - columns  : number of columns of workspaces
  *
  *   (Exported Functions)
  *   - moveWorkspace : switches workspaces in the direction specified, being
- *                     either UP, LEFT, RIGHT or DOWN (see Directions).
+ *                     either UP, LEFT, RIGHT or DOWN (see Meta.MotionDirection).
  *   - rowColToIndex : converts the row/column into an index for use with (e.g.)
  *                     global.screen.get_workspace_by_index(i)
  *   - indexToRowCol : converts an index (0 to global.screen.n_workspaces-1) to
@@ -57,7 +54,7 @@
  *
  * For example, to move to the workspace below us:
  *     const WorkspaceGrid = global.screen.workspace_grid;
- *     WorkspaceGrid.moveWorkspace(WorkspaceGrid.Directions.DOWN);
+ *     WorkspaceGrid.moveWorkspace(Meta.MotionDirection.DOWN);
  *
  * I am happy to try help/give an opinion/improve this extension to try make it
  *  more compatible with yours, email me :)
@@ -1337,7 +1334,6 @@ function unmodifyNumWorkspaces() {
  * such that if other extension authors want to they can use them.
  *
  * Exported constants:
- * Directions = { UP, LEFT, RIGHT, DOWN } : directions for navigating workspaces
  * rows     : number of rows of workspaces
  * columns  : number of columns of workspaces
  *
@@ -1347,17 +1343,10 @@ function unmodifyNumWorkspaces() {
  * indexToRowCol : converts an index (0 to global.screen.n_workspaces-1) to a
  *                 row and column
  * moveWorkspace : switches workspaces in the direction specified, being either
- *                 UP, LEFT, RIGHT or DOWN (see Directions).
+ *                 UP, LEFT, RIGHT or DOWN (see Meta.MotionDirection).
  ******************/
 function exportFunctionsAndConstants() {
     global.screen.workspace_grid = {
-        Directions: {
-            UP: UP,
-            LEFT: LEFT,
-            RIGHT: RIGHT,
-            DOWN: DOWN
-        },
-
         rows: settings.get_int(KEY_ROWS),
         columns: settings.get_int(KEY_COLS),
 
