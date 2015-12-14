@@ -205,7 +205,6 @@ let wmStorage = {};
 let wvStorage = {};
 let tbStorage = {};
 let nWorkspaces;
-let _workspaceSwitcherPopup = null;
 let onScrollId = 0;
 let settings = 0;
 
@@ -239,18 +238,16 @@ function rowColToIndex(row, col) {
 
 /** Gets the workspace switcher popup, creating if it doesn't exist. */
 function getWorkspaceSwitcherPopup() {
-    if (!_workspaceSwitcherPopup) {
-        _workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
-        // just in case.
-        Main.wm._workspaceSwitcherPopup = _workspaceSwitcherPopup;
-        // in GNOME 3.6 instead of storing the popup for next time, it's
-        // destroyed every single time it fades out..
-        _workspaceSwitcherPopup.connect('destroy', function () {
-            _workspaceSwitcherPopup = null;
+    if (Main.wm._workspaceSwitcherPopup == null) {
+        Main.wm._workspaceTracker.blockUpdates();
+        Main.wm._workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
+        Main.wm._workspaceSwitcherPopup.connect('destroy', Lang.bind(Main.wm, function() {
+            Main.wm._workspaceTracker.unblockUpdates();
             Main.wm._workspaceSwitcherPopup = null;
-        });
+            Main.wm._isWorkspacePrepended = false;
+        }));
     }
-    return _workspaceSwitcherPopup;
+    return Main.wm._workspaceSwitcherPopup;
 }
 
 // calculates the workspace index in that direction.
