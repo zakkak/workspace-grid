@@ -1344,6 +1344,10 @@ function unmodifyNumWorkspaces() {
  *                 global.screen.get_workspace_by_index(i)
  * indexToRowCol : converts an index (0 to global.screen.n_workspaces-1) to a
  *                 row and column
+ * getWorkspaceSwitcherPopup : gets our workspace switcher popup so you
+ *                             can show it if you want
+ * calculateWorkspace : returns the workspace index in the specified direction
+ *                      to the current, taking into account wrapping.
  * moveWorkspace : switches workspaces in the direction specified, being either
  *                 UP, LEFT, RIGHT or DOWN (see Meta.MotionDirection).
  ******************/
