@@ -455,7 +455,7 @@ const WorkspaceSwitcherPopup = new Lang.Class({
             } else {
                 indicator = new St.Bin({style_class: 'ws-switcher-box'});
             }
-            if (settings.get_boolean(KEY_SHOW_WORKSPACE_LABELS) && i !== this._activeWorkspaceIndex) {
+            if (settings.get_boolean(KEY_SHOW_WORKSPACE_LABELS)) {
                 indicator.child = new St.Label({
                     text: name,
                     style_class: 'ws-switcher-label'
