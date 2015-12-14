@@ -54,9 +54,13 @@ Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/is
 
 * Configuration
 
-To avoid weird re-sizing of the thumbnails-box please enable the
-extension *User themes*, as well.  *Workspace grid* currently overrides
-the css decoration to fix such behaviors.
+  To avoid weird re-sizing of the thumbnails-box please enable the
+  extension *User themes*, as well.  *Workspace grid* currently overrides
+  the css decoration to fix such behaviors.
+
+  Before configuring workspace grid, set the /Workspace Creation/ in
+  gnome tweak tool to /static/ and the /Number of Workspaces/ to the
+  total number of workspaces you want to have.
 
   Things that can be configured:
 
