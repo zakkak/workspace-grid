@@ -143,7 +143,6 @@ const Main = imports.ui.main;
 const OverviewControls = imports.ui.overviewControls;
 const Tweener = imports.ui.tweener;
 const WindowManager = imports.ui.windowManager;
-const WorkspaceSwitcher = imports.ui.workspaceSwitcherPopup;
 const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
 const WorkspacesView = imports.ui.workspacesView;
 
@@ -151,6 +150,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const Prefs = Me.imports.prefs;
+const MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
 
 const KEY_ROWS = Prefs.KEY_ROWS;
 const KEY_COLS = Prefs.KEY_COLS;
@@ -240,7 +240,8 @@ function rowColToIndex(row, col) {
 function getWorkspaceSwitcherPopup() {
     if (Main.wm._workspaceSwitcherPopup == null) {
         Main.wm._workspaceTracker.blockUpdates();
-        Main.wm._workspaceSwitcherPopup = new WorkspaceSwitcherPopup();
+        Main.wm._workspaceSwitcherPopup =
+            new MyWorkspaceSwitcherPopup.myWorkspaceSwitcherPopup(settings);
         Main.wm._workspaceSwitcherPopup.connect('destroy', Lang.bind(Main.wm, function() {
             Main.wm._workspaceTracker.unblockUpdates();
             Main.wm._workspaceSwitcherPopup = null;
@@ -313,167 +314,6 @@ function moveWorkspace(direction) {
         getWorkspaceSwitcherPopup().display(direction, newWs.index());
     }
 }
-
-// GNOME 3.6: _redraw --> _redisplay
-/************
- * Workspace Switcher that can do rows and columns as opposed to just rows.
- ************/
-const WorkspaceSwitcherPopup = new Lang.Class({
-    Name: 'WorkspaceSwitcherPopup',
-    Extends: WorkspaceSwitcher.WorkspaceSwitcherPopup,
-
-    // note: this makes sure everything fits vertically and then adjust the
-    // horizontal to fit.
-    _getPreferredHeight : function (actor, forWidth, alloc) {
-        let children = this._list.get_children(),
-            primary = Main.layoutManager.primaryMonitor,
-            nrows = global.screen.workspace_grid.rows,
-            availHeight = primary.height,
-            height = 0,
-            spacing = this._itemSpacing * (nrows - 1);
-
-        availHeight -= Main.panel.actor.height;
-        availHeight -= this.actor.get_theme_node().get_vertical_padding();
-        availHeight -= this._container.get_theme_node().get_vertical_padding();
-        availHeight -= this._list.get_theme_node().get_vertical_padding();
-
-        for (let i = 0; i < global.screen.n_workspaces;
-                i += global.screen.workspace_grid.columns) {
-            let [childMinHeight, childNaturalHeight] =
-                children[i].get_preferred_height(-1);
-            children[i].get_preferred_width(childNaturalHeight);
-            height += childNaturalHeight * primary.width / primary.height;
-        }
-
-        height += spacing;
-
-        height = Math.min(height, availHeight);
-        this._childHeight = (height - spacing) / nrows;
-
-        // check for horizontal overflow and adjust.
-        let childHeight = this._childHeight;
-        this._getPreferredWidth(actor, -1, {});
-        if (childHeight !== this._childHeight) {
-            // the workspaces will overflow horizontally and ._childWidth &
-            // ._childHeight have been adjusted to make it fit.
-            height = this._childHeight * nrows + spacing;
-            if (height > availHeight) {
-                this._childHeight = (availHeight - spacing) / nrows;
-            }
-        }
-
-        alloc.min_size = height;
-        alloc.natural_size = height;
-    },
-
-    _getPreferredWidth : function (actor, forHeight, alloc) {
-        let primary = Main.layoutManager.primaryMonitor,
-            ncols = global.screen.workspace_grid.columns;
-        this._childWidth = this._childHeight * primary.width / primary.height;
-        let width = this._childWidth * ncols + this._itemSpacing * (ncols - 1),
-            padding = this.actor.get_theme_node().get_horizontal_padding() +
-                      this._list.get_theme_node().get_horizontal_padding() +
-                      this._container.get_theme_node().get_horizontal_padding();
-
-        // but constrain to at most primary.width
-        if (width + padding > primary.width) {
-            this._childWidth = (primary.width - padding -
-                                this._itemSpacing * (ncols - 1)) / ncols;
-            this._childHeight = this._childWidth * primary.height /
-                                primary.width;
-            width = primary.width - padding;
-        }
-
-        alloc.min_size = width;
-        alloc.natural_size = width;
-    },
-
-    _allocate : function (actor, box, flags) {
-        let children = this._list.get_children(),
-            childBox = new Clutter.ActorBox(),
-            x = box.x1,
-            y = box.y1,
-            prevX = x,
-            prevY = y,
-            i = 0;
-        for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
-            x = box.x1;
-            prevX = x;
-            for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
-                childBox.x1 = prevX;
-                childBox.x2 = Math.round(x + this._childWidth);
-                childBox.y1 = prevY;
-                childBox.y2 = Math.round(y + this._childHeight);
-
-                x += this._childWidth + this._itemSpacing;
-                prevX = childBox.x2 + this._itemSpacing;
-                children[i].allocate(childBox, flags);
-                i++;
-                if (i >= MAX_WORKSPACES) {
-                    break;
-                }
-            }
-            if (i >= MAX_WORKSPACES) {
-                break;
-            }
-            prevY = childBox.y2 + this._itemSpacing;
-            y += this._childHeight + this._itemSpacing;
-        }
-    },
-
-    // GNOME 3.6: old _redraw + _position is now combined into _redisplay
-    // Also, workspace switcher is *destroyed* whenever it fades out.
-    // Previously it was stored.
-    _redisplay: function () {
-        //log('redisplay, direction ' + this._direction + ', going to ' + this._activeWorkspaceIndex);
-        this._list.destroy_all_children();
-
-        for (let i = 0; i < global.screen.n_workspaces; i++) {
-            let indicator = null;
-            let name = Meta.prefs_get_workspace_name(i);
-
-            if (i === this._activeWorkspaceIndex &&
-                   this._direction === UP) {
-                indicator = new St.Bin({
-                    style_class: 'ws-switcher-active-up'
-                });
-            } else if (i === this._activeWorkspaceIndex &&
-                   this._direction === DOWN) {
-                indicator = new St.Bin({
-                    style_class: 'ws-switcher-active-down'
-                });
-            } else if (i === this._activeWorkspaceIndex &&
-                   this._direction === LEFT) {
-                indicator = new St.Bin({
-                    style_class: 'ws-switcher-active-left'
-                });
-            } else if (i === this._activeWorkspaceIndex &&
-                   this._direction === RIGHT) {
-                indicator = new St.Bin({
-                    style_class: 'ws-switcher-active-right'
-                });
-            } else {
-                indicator = new St.Bin({style_class: 'ws-switcher-box'});
-            }
-            if (settings.get_boolean(KEY_SHOW_WORKSPACE_LABELS)) {
-                indicator.child = new St.Label({
-                    text: name,
-                    style_class: 'ws-switcher-label'
-                });
-            }
-
-            this._list.add_actor(indicator);
-        }
-
-        let primary = Main.layoutManager.primaryMonitor;
-        let [containerMinHeight, containerNatHeight] = this._container.get_preferred_height(global.screen_width);
-        let [containerMinWidth, containerNatWidth] = this._container.get_preferred_width(containerNatHeight);
-        this._container.x = primary.x + Math.floor((primary.width - containerNatWidth) / 2);
-        this._container.y = primary.y + Main.panel.actor.height +
-                            Math.floor(((primary.height - Main.panel.actor.height) - containerNatHeight) / 2);
-    }
-
-});
 
 /* Keybinding handler.
  * Should bring up a workspace switcher.
