@@ -135,6 +135,7 @@ const Mainloop = imports.mainloop;
 const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
+const Gio = imports.gi.Gio;
 
 const DND = imports.ui.dnd;
 const Main = imports.ui.main;
@@ -157,6 +158,8 @@ const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
 const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
 const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
 const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
+
+const OVERRIDE_SCHEMA = 'org.gnome.shell.overrides'
 
 // laziness
 const UP = Meta.MotionDirection.UP;
