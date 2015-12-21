@@ -1,5 +1,5 @@
 /***********************************************************************
- * Copyright (C)      2015 Foivos S. Zakkak <foivos@zakkak.net>        *
+ * Copyright (C) 2015, 2018 Foivos S. Zakkak <foivos@zakkak.net>       *
  * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>    *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
@@ -17,11 +17,12 @@
  * <http://www.gnu.org/licenses/>.                                     *
  ***********************************************************************/
 
-const Lang    = imports.lang;
-const Main    = imports.ui.main;
-const Meta    = imports.gi.Meta;
-const St      = imports.gi.St;
-const Clutter = imports.gi.Clutter;
+const Lang     = imports.lang;
+const Main     = imports.ui.main;
+const Meta     = imports.gi.Meta;
+const St       = imports.gi.St;
+const Clutter  = imports.gi.Clutter;
+const Mainloop = imports.mainloop;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me             = ExtensionUtils.getCurrentExtension();
@@ -43,7 +44,19 @@ const myWorkspaceSwitcherPopup = new Lang.Class({
 
     _init : function (settings) {
         this._settings = settings;
+
+        if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
+            this._thumbnailsBox = new Me.imports.extension.ThumbnailsBox();
+            this._thumbnailsBox._createThumbnails();
+            this._thumbnailsBox.actor.style_class = 'workspace-switcher';
+        }
+
         this.parent();
+
+        if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
+            this.actor.add_actor(this._thumbnailsBox.actor);
+            this._container.hide();
+        }
     },
 
     // note: this makes sure everything fits vertically and then adjust the
@@ -146,7 +159,6 @@ const myWorkspaceSwitcherPopup = new Lang.Class({
 
         for (let i = 0; i < global.screen.n_workspaces; i++) {
             let indicator = null;
-            let name = Meta.prefs_get_workspace_name(i);
 
             if (i === this._activeWorkspaceIndex &&
                    this._direction === UP) {
@@ -172,6 +184,8 @@ const myWorkspaceSwitcherPopup = new Lang.Class({
                 indicator = new St.Bin({style_class: 'ws-switcher-box'});
             }
             if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_LABELS)) {
+                let name = Meta.prefs_get_workspace_name(i);
+
                 indicator.child = new St.Label({
                     text: name,
                     style_class: 'ws-switcher-label'
@@ -181,12 +195,52 @@ const myWorkspaceSwitcherPopup = new Lang.Class({
             this._list.add_actor(indicator);
         }
 
-        let primary = Main.layoutManager.primaryMonitor;
-        let [containerMinHeight, containerNatHeight] = this._container.get_preferred_height(global.screen_width);
-        let [containerMinWidth, containerNatWidth] = this._container.get_preferred_width(containerNatHeight);
-        this._container.x = primary.x + Math.floor((primary.width - containerNatWidth) / 2);
-        this._container.y = primary.y + Main.panel.actor.height +
-                            Math.floor(((primary.height - Main.panel.actor.height) - containerNatHeight) / 2);
+        let workArea =
+            Main.layoutManager.getWorkAreaForMonitor(Main.layoutManager.primaryIndex);
+
+        if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
+            let [containerMinHeight, containerNatHeight] =
+                this._thumbnailsBox.actor.get_preferred_height(global.screen_width);
+            let [containerMinWidth, containerNatWidth] =
+                this._thumbnailsBox.actor.get_preferred_width(containerNatHeight);
+
+            this._thumbnailsBox.actor.x = workArea.x + Math.floor((workArea.width - containerNatWidth) / 2);
+            this._thumbnailsBox.actor.y = workArea.y + Main.panel.actor.height +
+                Math.floor(((workArea.height - Main.panel.actor.height) -
+                            containerNatHeight) / 2);
+        } else {
+            let [containerMinHeight, containerNatHeight] =
+                this._container.get_preferred_height(global.screen_width);
+            let [containerMinWidth, containerNatWidth] =
+                this._container.get_preferred_width(containerNatHeight);
+
+            this.actor.x = workArea.x + Math.floor((workArea.width - containerNatWidth) / 2);
+            this.actor.y = workArea.y + Main.panel.actor.height +
+                Math.floor(((workArea.height - Main.panel.actor.height) -
+                            containerNatHeight) / 2);
+
+        }
+    },
+
+    _destroy: function () {
+        this.parent._destroy();
+
+        if (this._timeoutId)
+            Mainloop.source_remove(this._timeoutId);
+
+        this._timeoutId = 0;
+
+        if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
+            this._thumbnailsBox._destroyThumbnails();
+            this._thumbnailsBox.destroy();
+        }
+
+        for (let i = 0; i < this._globalSignals.length; i++)
+            global.screen.disconnect(this._globalSignals[i]);
+
+        this.actor.destroy();
+
+        this.emit('destroy');
     }
 
 });

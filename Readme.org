@@ -71,6 +71,10 @@ Or
      e.g.
      [[https://cloud.githubusercontent.com/assets/1435395/22392052/262a96de-e4fe-11e6-9dee-58377978693c.png]]
 
+   - Whether to show workspace thumbnails in the switcher.
+
+     This is incompatible with workspace labels and currently doesn't have full theme support.
+
    - Workspaces thumbnails sidebar in overview.
 
      This sidebar can get pretty wide if you have multiple columns of

@@ -1,5 +1,5 @@
 /***********************************************************************
- * Copyright (C)      2015 Foivos S. Zakkak <foivos@zakkak.net         *
+ * Copyright (C) 2015, 2018 Foivos S. Zakkak <foivos@zakkak.net        *
  * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>    *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
@@ -44,6 +44,7 @@ const KEY_WRAP_TO_SAME = 'wrap-to-same';
 const KEY_MAX_HFRACTION = 'max-screen-fraction';
 const KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
 const KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
+const KEY_SHOW_WORKSPACE_THUMBNAILS = 'show-workspace-thumbnails';
 const KEY_RELATIVE_WORKSPACE_SWITCHING ="relative-workspace-switching";
 
 function init() {
@@ -98,6 +99,9 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
 
         this.addBoolean(_("Show workspace labels in the switcher?"),
             KEY_SHOW_WORKSPACE_LABELS);
+
+        this.addBoolean(_("Show workspace thumbnails labels in the switcher?"),
+            KEY_SHOW_WORKSPACE_THUMBNAILS);
 
         item = new Gtk.Label({
             label: _("The following settings determine how much horizontal " +
