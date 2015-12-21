@@ -1,6 +1,6 @@
 /***********************************************************************
- * Copyright (C)      2015 Foivos S. Zakkak <foivos@zakkak.net         *
- * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>         *
+ * Copyright (C)      2015 Foivos S. Zakkak <foivos@zakkak.net>        *
+ * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>    *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
  * modify it under the terms of the GNU General Public License as      *
@@ -17,8 +17,6 @@
  * <http://www.gnu.org/licenses/>.                                     *
  ***********************************************************************/
 
-/*global global, log */ // <-- jshint
-/*jshint unused: true, maxlen: 150 */
 /* Workspaces Grid GNOME shell extension.
  *
  * mathematical.coffee <mathematical.coffee@gmail.com>
