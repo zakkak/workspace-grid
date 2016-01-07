@@ -11,10 +11,6 @@ This is what it does:
 
 Note - if you use a bottom panel, [Frippery Bottom Panel](https://extensions.gnome.org/extension/3/bottom-panel/) **already has** workspace grid functionality (I didn't realise until I finished writing this extension)!
 
-| Workspace switcher/keybindings | Workspace thumbnails in Overview |
-|:-----:|:-----:|
-| ![Workspace switcher](http://cdn.bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension/downloads/workspace-switcher.png) | ![Workspace thumbnails](http://cdn.bitbucket.org/mathematicalcoffee/workspace-grid-gnome-shell-extension/downloads/workspace-thumbnails.png) |
-
 Written 2012 by mathematical.coffee [mathematical.coffee@gmail.com](mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question).   
 Project webpage: [at github](https://github.com/zakkak/workspace-grid-gnome-shell-extension).  
 Report bugs: [on the Issues page at github](https://github.com/zakkak/workspace-grid-gnome-shell-extension/issues).
