@@ -65,7 +65,7 @@ Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/is
   Things that can be configured:
 
   - Number of rows/columns in the workspace.
-  - Whether workspaces wrap around. 
+  - Whether workspaces wrap around.
 
     When navigating workspaces (via keybindings, scrolling over the
     workspace thumbnails in the Overview) do you want to wrap around
@@ -170,6 +170,7 @@ these are things you need to know.
 
 * For developers wanting to improve this extension:
 
+  - The '3.20' branch is compatible with GNOME 3.16, 3.18 and 3.20. It's meant to be stable.
   - The '3.18' branch is compatible with GNOME 3.16 and 3.18. It's meant to be stable.
   - The '3.16' branch is only compatible with GNOME 3.16. It's meant to be stable.
   - The '3.14' branch is only compatible with GNOME 3.14. It's meant to be stable.
