@@ -1,6 +1,6 @@
 /***********************************************************************
  * Copyright (C)      2015 Foivos S. Zakkak <foivos@zakkak.net         *
- * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>         *
+ * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>    *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
  * modify it under the terms of the GNU General Public License as      *
@@ -72,7 +72,7 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this._throttlers = {};
 
         let item = new Gtk.Label({
-            label: _("NOTE: maximum number of workspaces is 36.")
+            label: _("NOTE: Please set Workspace Creation to Static. Also, note that the maximum number of workspaces is 36.")
         });
         item.set_line_wrap(true);
         this.addItem(item, 0, 2, 1);
