@@ -54,32 +54,40 @@ Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/is
 
 * Configuration
 
-  To avoid weird re-sizing of the thumbnails-box please enable the
-  extension *User themes*, as well.  *Workspace grid* currently overrides
-  the css decoration to fix such behaviors.
+** Quirks
+   1. To avoid weird re-sizing of the thumbnails-box please enable the
+      extension *User themes*, as well.  *Workspace grid* currently
+      overrides the css decoration to fix such behaviors.
+   2. Before configuring workspace grid, set the /Workspace Creation/ in
+      gnome tweak tool to /static/ and the /Number of Workspaces/ to the
+      total number of workspaces you want to have.
 
-  Before configuring workspace grid, set the /Workspace Creation/ in
-  gnome tweak tool to /static/ and the /Number of Workspaces/ to the
-  total number of workspaces you want to have.
+** Configuration options:
 
-  Things that can be configured:
+   - Number of rows/columns in the workspace.
+   - Whether workspaces wrap around.
 
-  - Number of rows/columns in the workspace.
-  - Whether workspaces wrap around.
+     When navigating workspaces (via keybindings, scrolling over the
+     workspace thumbnails in the Overview) do you want to wrap around
+     from the start to the end (e.g. going past workspace ~n~ wraps
+     back to workspace 1)?
+   - Whether to show workspace labels in the switcher.
 
-    When navigating workspaces (via keybindings, scrolling over the
-    workspace thumbnails in the Overview) do you want to wrap around
-    from the start to the end (e.g. going past workspace ~n~ wraps
-    back to workspace 1)?
-  - Whether to show workspace labels in the switcher.
-  - Workspaces thumbnails sidebar in overview.
+     To assign labels to workspaces use ~dconf-editor~ and go to
+     ~/org/gnome/desktop/wm/preferences/workspace-names~, then change
+     the value to whatever you wish.
 
-    This sidebar can get pretty wide if you have multiple columns of
-    workspaces.  The sidebar can be collapsed to the side of the screen
-    if it becomes too wide so that you then hover your mouse over it
-    to uncollapse it.
+     e.g.
+     [[https://cloud.githubusercontent.com/assets/1435395/22392052/262a96de-e4fe-11e6-9dee-58377978693c.png]]
 
------
+   - Workspaces thumbnails sidebar in overview.
+
+     This sidebar can get pretty wide if you have multiple columns of
+     workspaces.  The sidebar can be collapsed to the side of the screen
+     if it becomes too wide so that you then hover your mouse over it
+     to uncollapse it.
+
+ -----
 
 * For developers wanting to integrate with this extension
 
