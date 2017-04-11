@@ -1,3 +1,6 @@
+As of February 2017 this extension is looking for a new maintainer.
+Please contact [[https://foivos.zakkak.net][Foivos Zakkak]] or open an issue if interested.
+
 * Workspace Grid GNOME Shell Extension
 
 This extension allows you to configure your workspaces in a grid,
@@ -11,9 +14,12 @@ inspired by the [[https://extensions.gnome.org/extension/12/static-workspaces/][
 Note - if you use a bottom panel, [[https://extensions.gnome.org/extension/3/bottom-panel/][Frippery Bottom Panel]] *already has*
 workspace grid functionality!
 
-This extension Written 2012 by [[mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question][Amy Chan]].
+This extension was originally written in 2012 by [[mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question][Amy Chan]].
 
-Maintained by [[https://foivos.zakkak.net][Foivos S. Zakkak]] since October, 2014.
+Maintained by [[https://foivos.zakkak.net][Foivos Zakkak]] October, 2014 -- February, 2017.
+
+As of February 2017 this extension is looking for a new maintainer.
+Please contact [[https://foivos.zakkak.net][Foivos Zakkak]] or open an issue if interested.
 
 Project webpage: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension][at github]].
 
