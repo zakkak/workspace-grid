@@ -44,6 +44,7 @@ const KEY_WRAP_TO_SAME = 'wrap-to-same';
 const KEY_MAX_HFRACTION = 'max-screen-fraction';
 const KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
 const KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
+const KEY_RELATIVE_WORKSPACE_SWITCHING ="relative-workspace-switching";
 
 function init() {
     Convenience.initTranslations();
@@ -84,6 +85,8 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this.addSpin(_("Number of columns of workspaces:"), KEY_COLS, true,
             1, 36, 1);
 
+		this.addBoolean(_("Relative (to current row) workspace switching?"),
+            KEY_RELATIVE_WORKSPACE_SWITCHING);
         let toggle = this.addBoolean(_("Wraparound workspaces when navigating?"),
             KEY_WRAPAROUND);
         this._sameRowCol = this.addBoolean(

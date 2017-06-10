@@ -18,6 +18,11 @@
       <summary>Whether to wrap around when navigating workspaces.</summary>
       <description>Whether to wrap from (say) the end of the row back to the front of the row when navigating workspaces (e.g. with the keybindings)</description>
     </key>
+    <key type="b" name="relative-workspace-switching">
+      <default>false</default>
+      <summary>Whether to navigate to relative workspace indexes within row.</summary>
+      <description>Whether to use absolute (e.g. 1-36) navigation to specific workspace or relative to current row (e.g. when on workspace 15, navigation to workspace 1 switches to workspace 11) when navigating workspaces (e.g. with the keybindings)</description>
+    </key>
     <key type="b" name="wrap-to-same">
       <default>false</default>
       <summary>Whether to wrap to the *same* row/col or the next/previous one if wraparound is enabled.</summary>

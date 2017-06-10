@@ -356,6 +356,9 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
         direction = Meta.MotionDirection[target.toUpperCase()];
     } else if (target > 0) {
         target--;
+		if (settings.get_boolean(Prefs.KEY_RELATIVE_WORKSPACE_SWITCHING)) {
+			target = target + Math.floor(screen.get_active_workspace_index() / global.screen.workspace_grid.columns ) * global.screen.workspace_grid.columns ;
+		}
         newWs = screen.get_workspace_by_index(target);
     }
 
