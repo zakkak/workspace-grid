@@ -92,6 +92,12 @@ Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/is
      workspaces.  The sidebar can be collapsed to the side of the screen
      if it becomes too wide so that you then hover your mouse over it
      to uncollapse it.
+   - Whether to use relative navigation (instead of absolute) for workspaces
+     
+     When using relative navigation you always stay within current row of desktops.
+
+     e.g.
+     When you have 20 desktops (2 rows) and you're on desktop 15 and press Ctrl+2 (navigate to workspace 2), it actually switches to workspace 12 (opposed to workspace 2 if relative workspace navigation is not enabled). 
 
  -----
 
