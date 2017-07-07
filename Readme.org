@@ -1,6 +1,3 @@
-As of February 2017 this extension is looking for a new maintainer.
-Please contact [[https://foivos.zakkak.net][Foivos Zakkak]] or open an issue if interested.
-
 * Workspace Grid GNOME Shell Extension
 
 This extension allows you to configure your workspaces in a grid,
@@ -16,10 +13,7 @@ workspace grid functionality!
 
 This extension was originally written in 2012 by [[mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question][Amy Chan]].
 
-Maintained by [[https://foivos.zakkak.net][Foivos Zakkak]] October, 2014 -- February, 2017.
-
-As of February 2017 this extension is looking for a new maintainer.
-Please contact [[https://foivos.zakkak.net][Foivos Zakkak]] or open an issue if interested.
+Maintained by [[https://foivos.zakkak.net][Foivos Zakkak]] since October, 2014.
 
 Project webpage: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension][at github]].
 
@@ -58,6 +52,11 @@ Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/is
 1. Download the .zip file on the [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/releases][Downloads page]].
 2. Open ~gnome-tweak-tool~, go to "Shell Extensions", "Install Extension" and select the .zip file.
 
+Or
+
+1. Visit https://extensions.gnome.org/extension/484/workspace-grid/
+2. Install by clicking the toggle switch
+
 * Configuration
 
 ** Quirks
@@ -93,11 +92,11 @@ Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/is
      if it becomes too wide so that you then hover your mouse over it
      to uncollapse it.
    - Whether to use relative navigation (instead of absolute) for workspaces
-     
+
      When using relative navigation you always stay within current row of desktops.
 
      e.g.
-     When you have 20 desktops (2 rows) and you're on desktop 15 and press Ctrl+2 (navigate to workspace 2), it actually switches to workspace 12 (opposed to workspace 2 if relative workspace navigation is not enabled). 
+     When you have 20 desktops (2 rows) and you're on desktop 15 and press Ctrl+2 (navigate to workspace 2), it actually switches to workspace 12 (opposed to workspace 2 if relative workspace navigation is not enabled).
 
  -----
 
@@ -190,16 +189,16 @@ these are things you need to know.
 
 * For developers wanting to improve this extension:
 
-  - The '3.20' branch is compatible with GNOME 3.16, 3.18 and 3.20. It's meant to be stable.
-  - The '3.18' branch is compatible with GNOME 3.16 and 3.18. It's meant to be stable.
-  - The '3.16' branch is only compatible with GNOME 3.16. It's meant to be stable.
-  - The '3.14' branch is only compatible with GNOME 3.14. It's meant to be stable.
-  - The '3.12' branch is only compatible with GNOME 3.12. It's meant to be stable.
-  - The '3.10' branch is only compatible with GNOME 3.10. It's meant to be stable.
-  - The '3.8' branch is only compatible with GNOME 3.8. It's meant to be stable [16/05/2013: not yet working]
-  - The '3.6' branch is only compatible with GNOME 3.6. It's meant to be stable.
-  - The '3.4' branch is only compatible with GNOME 3.4 - things like keybinding names have changed since GNOME 3.2. It's meant to be stable.
-  - The '3.2' branch is only compatible with GNOME 3.2. It's meant to be stable.
+  - The '3.20' branch is compatible with GNOME 3.16, 3.18 and 3.20
+  - The '3.18' branch is compatible with GNOME 3.16 and 3.18
+  - The '3.16' branch is only compatible with GNOME 3.16
+  - The '3.14' branch is only compatible with GNOME 3.14
+  - The '3.12' branch is only compatible with GNOME 3.12
+  - The '3.10' branch is only compatible with GNOME 3.10
+  - The '3.8' branch is only compatible with GNOME 3.8 [16/05/2013: not yet working]
+  - The '3.6' branch is only compatible with GNOME 3.6
+  - The '3.4' branch is only compatible with GNOME 3.4
+  - The '3.2' branch is only compatible with GNOME 3.2
   - The 'master' branch is currently essentially the 3.2 branch...
 
 ** Known issues
