@@ -16,6 +16,10 @@ Project webpage [[https://github.com/zakkak/workspace-grid-gnome-shell-extension
 
 Report bugs [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/issues][on the Issues page at github]].
 
+** Screenshots
+
+[[https://user-images.githubusercontent.com/1435395/28044317-581fca6c-65df-11e7-85eb-e0686f82787f.png]]
+[[https://user-images.githubusercontent.com/1435395/28044318-585bd304-65df-11e7-925b-d1b66bf58282.png]]
 
 ** Other relevant extensions
    Combine these extensions with this one or just use these if this doesn't do what you want:
