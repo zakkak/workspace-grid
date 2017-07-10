@@ -8,16 +8,13 @@ inspired by the [[https://extensions.gnome.org/extension/12/static-workspaces/][
 - Updates the workspaces display in the overview to reflect the workspace grid layout.
 - updates the workspace switcher/keybindings to reflect the workspace grid layout.
 
-Note - if you use a bottom panel, [[https://extensions.gnome.org/extension/3/bottom-panel/][Frippery Bottom Panel]] *already has*
-workspace grid functionality!
-
 This extension was originally written in 2012 by [[mailto:mathematical.coffee@gmail.com?subject=workspace-grid%20question][Amy Chan]].
 
 Maintained by [[https://foivos.zakkak.net][Foivos Zakkak]] since October, 2014.
 
-Project webpage: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension][at github]].
+Project webpage [[https://github.com/zakkak/workspace-grid-gnome-shell-extension]].
 
-Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/issues][on the Issues page at github]].
+Report bugs [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/issues][on the Issues page at github]].
 
 
 ** Other relevant extensions
@@ -25,25 +22,10 @@ Report bugs: [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/is
 
    - If you use a bottom panel, [[https://extensions.gnome.org/extension/3/bottom-panel/][Frippery Bottom Panel]] *already has* workspace grid functionality.
 
-   - If you just want static workspaces and none of this grid stuff,
-     use the [[https://extensions.gnome.org/extension/12/static-workspaces/][Frippery Static Workspaces extension]].
-
-   - If you do not want the workspace thumbnail preview in the
-     overview, use the [[https://extensions.gnome.org/extension/387/remove-workspaces-sidebar/][Remove Workspaces Sidebar extension]].
-
    - If you want a textual workspace indicator in your panel, use the
      [[https://extensions.gnome.org/extension/21/workspace-indicator/][Workspace Indicator extension]].
 
-   - If you want to use arrow keys to navigate between workspaces in
-     the overview, use the [[https://extensions.gnome.org/extension/29/workspace-navigator/][Workspace navigator extension]].
-
-   - If you want a graphical workspace indicator/switcher in your
-     panel (like GNOME-panel's workspace switcher, but without the
-     window previews), see the [[https://extensions.gnome.org/extension/464/workspacebar/][WorkspaceBar extension]]. (I am working
-     on a version with the window icons and such but it's still in
-     progress).
-
-   Let me know of similar extensions to add to this list.
+   Let me know of similar (active) extensions to add to this list.
 
 -----
 
@@ -59,7 +41,7 @@ Or
 
 * Configuration
 
-** Quirks
+** Quirks / Known Issues
    1. To avoid weird re-sizing of the thumbnails-box please enable the
       extension *User themes*, as well.  *Workspace grid* currently
       overrides the css decoration to fix such behaviors.
@@ -186,30 +168,3 @@ these are things you need to know.
    - clicking in the overview.
 
 -----
-
-* For developers wanting to improve this extension:
-
-  - The '3.20' branch is compatible with GNOME 3.16, 3.18 and 3.20
-  - The '3.18' branch is compatible with GNOME 3.16 and 3.18
-  - The '3.16' branch is only compatible with GNOME 3.16
-  - The '3.14' branch is only compatible with GNOME 3.14
-  - The '3.12' branch is only compatible with GNOME 3.12
-  - The '3.10' branch is only compatible with GNOME 3.10
-  - The '3.8' branch is only compatible with GNOME 3.8 [16/05/2013: not yet working]
-  - The '3.6' branch is only compatible with GNOME 3.6
-  - The '3.4' branch is only compatible with GNOME 3.4
-  - The '3.2' branch is only compatible with GNOME 3.2
-  - The 'master' branch is currently essentially the 3.2 branch...
-
-** Known issues
-   From GNOME 3.4+ to keep workspaces static we can just adjust some settings:
-
-   - ~org.gnome.shell.overrides.dynamic-workspaces~ to ~false~
-   - ~org.gnome.desktop.wm.preferences.num-workspaces~ to the number of workspaces
-
-   However then you can't drag/drop applications between workspaces
-   (GNOME 3.4/3.6 anyway), so instead of doing that we make use of the
-   Frippery Static Workspace code.
-
-   In Gnome 3.14 drag/drop is not working both in dynamic and static
-   setup, so we dropped the Flippery Static Workspace code.
