@@ -12,7 +12,7 @@ This extension was originally written in 2012 by [[mailto:mathematical.coffee@gm
 
 Maintained by [[https://foivos.zakkak.net][Foivos Zakkak]] since October, 2014.
 
-Project webpage [[https://github.com/zakkak/workspace-grid-gnome-shell-extension]].
+Project webpage [[https://github.com/zakkak/workspace-grid]].
 
 Report bugs [[https://github.com/zakkak/workspace-grid-gnome-shell-extension/issues][on the Issues page at github]].
 
