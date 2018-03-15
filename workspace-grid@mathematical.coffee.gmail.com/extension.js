@@ -149,15 +149,15 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const Prefs = Me.imports.prefs;
-const MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
+var MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
 
-const KEY_ROWS = Prefs.KEY_ROWS;
-const KEY_COLS = Prefs.KEY_COLS;
-const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
-const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
-const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
-const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
-const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
+var KEY_ROWS = Prefs.KEY_ROWS;
+var KEY_COLS = Prefs.KEY_COLS;
+var KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
+var KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
+var KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
+var KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
+var KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
 
 const OVERRIDE_SCHEMA = 'org.gnome.shell.overrides'
 
@@ -397,6 +397,11 @@ function actionMoveWorkspace(destination) {
                                 settings.get_boolean(KEY_WRAP_TO_SAME));
 
     let ws = global.screen.get_workspace_by_index(to);
+
+    // if ws is null, the workspace does't exist, so keep on actual workspace
+    if (ws == null) {
+        ws = global.screen.get_active_workspace();
+    }
 
     if (to !== from) {
         ws.activate(global.get_current_time());
@@ -972,19 +977,21 @@ function overrideWorkspaceDisplay() {
     wvStorage._init = WorkspacesView.WorkspacesView.prototype._init;
     WorkspacesView.WorkspacesView.prototype._init = function () {
         wvStorage._init.apply(this, arguments);
-        this._horizontalScroll = this.actor.connect('scroll-event',
-            Lang.bind(this, function () {
+        Main.overview.connect('scroll-event', Lang.bind(this, function _horizontalScroll(actor, event) {
                 // same as the original, but for LEFT/RIGHT
-                if (!this.actor.mapped)
+                if (!actor.mapped)
                     return false;
+                let wsIndex =  global.screen.get_active_workspace_index();
+
                 switch (event.get_scroll_direction()) {
-                case Clutter.ScrollDirection.LEFT:
-                    global.screen.workspace_grid.actionMoveWorkspace(LEFT);
-                    return true;
-                case Clutter.ScrollDirection.RIGHT:
-                    global.screen.workspace_grid.actionMoveWorkspace(RIGHT);
-                    return true;
+                    case Clutter.ScrollDirection.UP:
+                        global.screen.workspace_grid.actionMoveWorkspace(wsIndex-1);
+                        return true;
+                    case Clutter.ScrollDirection.DOWN:
+                        global.screen.workspace_grid.actionMoveWorkspace(wsIndex+1);
+                        return true;
                 }
+
                 return false;
             }));
     };
