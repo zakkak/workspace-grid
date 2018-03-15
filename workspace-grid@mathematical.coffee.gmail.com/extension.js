@@ -398,6 +398,11 @@ function actionMoveWorkspace(destination) {
 
     let ws = global.screen.get_workspace_by_index(to);
 
+    // if ws is null, the workspace does't exist, so keep on actual workspace
+    if (ws == null) {
+        ws = global.screen.get_active_workspace();
+    }
+
     if (to !== from) {
         ws.activate(global.get_current_time());
     }
@@ -972,19 +977,21 @@ function overrideWorkspaceDisplay() {
     wvStorage._init = WorkspacesView.WorkspacesView.prototype._init;
     WorkspacesView.WorkspacesView.prototype._init = function () {
         wvStorage._init.apply(this, arguments);
-        this._horizontalScroll = this.actor.connect('scroll-event',
-            Lang.bind(this, function () {
+        Main.overview.connect('scroll-event', Lang.bind(this, function _horizontalScroll(actor, event) {
                 // same as the original, but for LEFT/RIGHT
-                if (!this.actor.mapped)
+                if (!actor.mapped)
                     return false;
+                let wsIndex =  global.screen.get_active_workspace_index();
+
                 switch (event.get_scroll_direction()) {
-                case Clutter.ScrollDirection.LEFT:
-                    global.screen.workspace_grid.actionMoveWorkspace(LEFT);
-                    return true;
-                case Clutter.ScrollDirection.RIGHT:
-                    global.screen.workspace_grid.actionMoveWorkspace(RIGHT);
-                    return true;
+                    case Clutter.ScrollDirection.UP:
+                        global.screen.workspace_grid.actionMoveWorkspace(wsIndex-1);
+                        return true;
+                    case Clutter.ScrollDirection.DOWN:
+                        global.screen.workspace_grid.actionMoveWorkspace(wsIndex+1);
+                        return true;
                 }
+
                 return false;
             }));
     };
