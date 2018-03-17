@@ -865,11 +865,11 @@ const ThumbnailsBox = new Lang.Class({
 
                 x += thumbnailWidth + spacing;
                 ++i;
-                if (i >= MAX_WORKSPACES) {
+                if (i >= MAX_WORKSPACES || i >= this._thumbnails.length) {
                     break;
                 }
             } // col loop
-            if (i >= MAX_WORKSPACES) {
+            if (i >= MAX_WORKSPACES || i >= this._thumbnails.length) {
                 break;
             }
             y += thumbnailHeight + spacing;
