@@ -151,13 +151,13 @@ const Convenience = Me.imports.convenience;
 const Prefs = Me.imports.prefs;
 var MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
 
-var KEY_ROWS = Prefs.KEY_ROWS;
-var KEY_COLS = Prefs.KEY_COLS;
-var KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
-var KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
-var KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
-var KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
-var KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
+const KEY_ROWS = Prefs.KEY_ROWS;
+const KEY_COLS = Prefs.KEY_COLS;
+const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
+const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
+const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
+const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
+const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
 
 const OVERRIDE_SCHEMA = 'org.gnome.shell.overrides'
 
