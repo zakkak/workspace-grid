@@ -1043,7 +1043,7 @@ function overrideWorkspaceDisplay() {
     tbStorage._getAlwaysZoomOut = OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut;
     OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut = function () {
         // *Always* show the pager when hovering or during a drag, regardless of width.
-        let alwaysZoomOut = this.actor.hover ||  this.inDrag;
+        let alwaysZoomOut = this.actor.hover ||  this._inDrag;
 
         // always zoom out if there is a monitor to the right of primary.
         if (!alwaysZoomOut) {
