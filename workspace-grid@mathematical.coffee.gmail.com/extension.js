@@ -149,7 +149,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const Prefs = Me.imports.prefs;
-var MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
+const MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
 
 const KEY_ROWS = Prefs.KEY_ROWS;
 const KEY_COLS = Prefs.KEY_COLS;
@@ -458,7 +458,7 @@ function unoverrideKeybindingsAndPopup() {
                                                    Main.wm._showWorkspaceSwitcher));
     }
 
-    _workspaceSwitcherPopup = null;
+    Main.wm._workspaceSwitcherPopup = null;
 }
 
 // GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
@@ -979,22 +979,24 @@ function overrideWorkspaceDisplay() {
         wvStorage._init.apply(this, arguments);
         Main.overview.connect('scroll-event', Lang.bind(this, function _horizontalScroll(actor, event) {
                 // same as the original, but for LEFT/RIGHT
-                if (!actor.mapped)
-                    return false;
+                // if (!actor.mapped)
+                //     return false;
                 let wsIndex =  global.screen.get_active_workspace_index();
 
                 switch (event.get_scroll_direction()) {
                     case Clutter.ScrollDirection.UP:
                         global.screen.workspace_grid.actionMoveWorkspace(wsIndex-1);
-                        return true;
+                        return Clutter.EVENT_STOP;
                     case Clutter.ScrollDirection.DOWN:
                         global.screen.workspace_grid.actionMoveWorkspace(wsIndex+1);
-                        return true;
+                        return Clutter.EVENT_STOP;
                 }
 
-                return false;
+                return Clutter.EVENT_PROPAGATE;
             }));
     };
+
+
 
     // 2. Replace workspacesDisplay._thumbnailsBox with my own.
     // Start with controls collapsed (since the workspace thumbnails can take
