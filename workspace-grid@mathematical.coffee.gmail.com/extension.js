@@ -1114,6 +1114,14 @@ function unoverrideWorkspaceDisplay() {
 }
 
 /******************
+* Sets org.gnome.shell.overrides.dynamic-workspaces schema to false
+*******************/
+function disableDynamicWorkspaces() {
+    let settings = global.get_overrides_settings();
+    settings.set_boolean('dynamic-workspaces', false);
+}
+
+/******************
  * tells Meta about the number of workspaces we want
  ******************/
 function modifyNumWorkspaces() {
@@ -1166,6 +1174,8 @@ function modifyNumWorkspaces() {
     // this forces the workspaces display to update itself to match the new
     // number of workspaces.
     global.screen.notify('n-workspaces');
+
+    disableDynamicWorkspaces();
 }
 
 function unmodifyNumWorkspaces() {
