@@ -25,6 +25,14 @@
     spacing: 8px;
 }
 
+.workspace-switcher-thumbnails {
+    background: rgba(238, 238, 238, 0.2);
+    border-width: 0px;
+    border-radius: 15px;
+    box-shadow: 0px 0px 0px 15px; /* top right bottom left */
+    spacing: 10px; /* used by imports.ui.workspaceSwitcherPopup */
+}
+
 .workspace-switcher-group {
     padding: 10px;
 }

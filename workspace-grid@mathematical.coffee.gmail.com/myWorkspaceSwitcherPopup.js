@@ -23,6 +23,8 @@ const Meta     = imports.gi.Meta;
 const St       = imports.gi.St;
 const Clutter  = imports.gi.Clutter;
 const Mainloop = imports.mainloop;
+const Tweener = imports.ui.tweener;
+const GLib = imports.gi.GLib;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me             = ExtensionUtils.getCurrentExtension();
@@ -34,6 +36,8 @@ const UP    = Meta.MotionDirection.UP;
 const DOWN  = Meta.MotionDirection.DOWN;
 const LEFT  = Meta.MotionDirection.LEFT;
 const RIGHT = Meta.MotionDirection.RIGHT;
+
+var ANIMATION_TIME = WorkspaceSwitcherPopup.ANIMATION_TIME;
 
 /************
  * Workspace Switcher that can do rows and columns as opposed to just rows.
@@ -48,7 +52,7 @@ const myWorkspaceSwitcherPopup = new Lang.Class({
         if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
             this._thumbnailsBox = new Me.imports.extension.ThumbnailsBox();
             this._thumbnailsBox._createThumbnails();
-            this._thumbnailsBox.actor.style_class = 'workspace-switcher';
+            this._thumbnailsBox.actor.style_class = 'workspace-switcher-thumbnails';
         }
 
         this.parent();
@@ -218,16 +222,33 @@ const myWorkspaceSwitcherPopup = new Lang.Class({
             this.actor.y = workArea.y + Main.panel.actor.height +
                 Math.floor(((workArea.height - Main.panel.actor.height) -
                             containerNatHeight) / 2);
-
         }
     },
 
-    _destroy: function () {
-        this.parent._destroy();
+    /**
+     * _onTimeout is automatically called by the parent class WorkspaceSwitcherPopup
+     */
+    _onTimeout: function () {
+        Mainloop.source_remove(this._timeoutId);
+        this._timeoutId = 0;
 
+        Tweener.addTween( (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_THUMBNAILS)) ? this._thumbnailsBox.actor : this._container,
+            {
+                opacity: 0,
+                time: ANIMATION_TIME,
+                transition: 'easeOutQuad',
+                onCompleteScope: this,
+                onComplete: function() {
+                    this.destroy();
+                }
+            }
+        );
+        return GLib.SOURCE_REMOVE;
+    },
+
+    destroy: function () {
         if (this._timeoutId)
             Mainloop.source_remove(this._timeoutId);
-
         this._timeoutId = 0;
 
         if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
