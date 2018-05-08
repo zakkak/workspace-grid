@@ -97,11 +97,27 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
             this._sameRowCol.set_sensitive(widget.active);
         }));
 
-        this.addBoolean(_("Show workspace labels in the switcher?"),
+        let bt_labels = this.addBoolean(_("Show workspace labels in the switcher?"),
             KEY_SHOW_WORKSPACE_LABELS);
+        if (this._settings.get_boolean(KEY_SHOW_WORKSPACE_THUMBNAILS)) {
+            bt_labels.set_state(false);
+            bt_labels.set_sensitive(false);
+        }
 
-        this.addBoolean(_("Show workspace thumbnails labels in the switcher?"),
+        let lb_thumbnails = this.addBoolean(_("Show workspace thumbnails labels in the switcher?"),
             KEY_SHOW_WORKSPACE_THUMBNAILS);
+
+        this._state_labels_before_thumbs_selected = bt_labels.get_state();
+        lb_thumbnails.connect('state-set', Lang.bind(this, function(widget, flag_state) {
+            bt_labels.set_sensitive(!flag_state);
+            if (flag_state) {
+                this._state_labels_before_thumbs_selected = bt_labels.get_state();
+                bt_labels.set_state(false);
+            } else {
+                bt_labels.set_state(this._state_labels_before_thumbs_selected);
+            }
+            return false;
+        }));
 
         item = new Gtk.Label({
             label: _("The following settings determine how much horizontal " +
