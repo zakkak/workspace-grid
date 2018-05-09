@@ -45,6 +45,7 @@ const KEY_MAX_HFRACTION = 'max-screen-fraction';
 const KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
 const KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
 const KEY_RELATIVE_WORKSPACE_SWITCHING ="relative-workspace-switching";
+const KEY_PLACE_SWITCHER_BOTTOM = "place-switcher-bottom";
 
 function init() {
     Convenience.initTranslations();
@@ -98,6 +99,9 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
 
         this.addBoolean(_("Show workspace labels in the switcher?"),
             KEY_SHOW_WORKSPACE_LABELS);
+
+        this.addBoolean(_("Place the overview workspace switcher at the bottom?"),
+            KEY_PLACE_SWITCHER_BOTTOM);
 
         item = new Gtk.Label({
             label: _("The following settings determine how much horizontal " +
