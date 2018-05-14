@@ -29,15 +29,15 @@ const Prefs          = Me.imports.prefs;
 
 const WorkspaceSwitcherPopup = imports.ui.workspaceSwitcherPopup;
 
-const UP    = Meta.MotionDirection.UP;
-const DOWN  = Meta.MotionDirection.DOWN;
-const LEFT  = Meta.MotionDirection.LEFT;
-const RIGHT = Meta.MotionDirection.RIGHT;
+var UP    = Meta.MotionDirection.UP;
+var DOWN  = Meta.MotionDirection.DOWN;
+var LEFT  = Meta.MotionDirection.LEFT;
+var RIGHT = Meta.MotionDirection.RIGHT;
 
 /************
  * Workspace Switcher that can do rows and columns as opposed to just rows.
  ************/
-const myWorkspaceSwitcherPopup = new Lang.Class({
+var myWorkspaceSwitcherPopup = new Lang.Class({
     Name: 'myWorkspaceSwitcherPopup',
     Extends: WorkspaceSwitcherPopup.WorkspaceSwitcherPopup,
 
