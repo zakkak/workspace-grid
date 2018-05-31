@@ -149,15 +149,15 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const Prefs = Me.imports.prefs;
-var MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
+const MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
 
-var KEY_ROWS = Prefs.KEY_ROWS;
-var KEY_COLS = Prefs.KEY_COLS;
-var KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
-var KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
-var KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
-var KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
-var KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
+const KEY_ROWS = Prefs.KEY_ROWS;
+const KEY_COLS = Prefs.KEY_COLS;
+const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
+const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
+const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
+const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
+const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
 
 const OVERRIDE_SCHEMA = 'org.gnome.shell.overrides'
 
@@ -458,7 +458,7 @@ function unoverrideKeybindingsAndPopup() {
                                                    Main.wm._showWorkspaceSwitcher));
     }
 
-    _workspaceSwitcherPopup = null;
+    Main.wm._workspaceSwitcherPopup = null;
 }
 
 // GNOME 3.2 & 3.4: Main.overview._workspacesDisplay
@@ -865,11 +865,11 @@ const ThumbnailsBox = new Lang.Class({
 
                 x += thumbnailWidth + spacing;
                 ++i;
-                if (i >= MAX_WORKSPACES) {
+                if (i >= MAX_WORKSPACES || i >= this._thumbnails.length) {
                     break;
                 }
             } // col loop
-            if (i >= MAX_WORKSPACES) {
+            if (i >= MAX_WORKSPACES || i >= this._thumbnails.length) {
                 break;
             }
             y += thumbnailHeight + spacing;
@@ -1012,22 +1012,24 @@ function overrideWorkspaceDisplay() {
         wvStorage._init.apply(this, arguments);
         Main.overview.connect('scroll-event', Lang.bind(this, function _horizontalScroll(actor, event) {
                 // same as the original, but for LEFT/RIGHT
-                if (!actor.mapped)
-                    return false;
+                // if (!actor.mapped)
+                //     return false;
                 let wsIndex =  global.screen.get_active_workspace_index();
 
                 switch (event.get_scroll_direction()) {
                     case Clutter.ScrollDirection.UP:
                         global.screen.workspace_grid.actionMoveWorkspace(wsIndex-1);
-                        return true;
+                        return Clutter.EVENT_STOP;
                     case Clutter.ScrollDirection.DOWN:
                         global.screen.workspace_grid.actionMoveWorkspace(wsIndex+1);
-                        return true;
+                        return Clutter.EVENT_STOP;
                 }
 
-                return false;
+                return Clutter.EVENT_PROPAGATE;
             }));
     };
+
+
 
     // 2. Replace workspacesDisplay._thumbnailsBox with my own.
     // Start with controls collapsed (since the workspace thumbnails can take
@@ -1076,7 +1078,7 @@ function overrideWorkspaceDisplay() {
     tbStorage._getAlwaysZoomOut = OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut;
     OverviewControls.ThumbnailsSlider.prototype._getAlwaysZoomOut = function () {
         // *Always* show the pager when hovering or during a drag, regardless of width.
-        let alwaysZoomOut = this.actor.hover ||  this.inDrag;
+        let alwaysZoomOut = this.actor.hover ||  this._inDrag;
 
         // always zoom out if there is a monitor to the right of primary.
         if (!alwaysZoomOut) {
@@ -1145,6 +1147,14 @@ function unoverrideWorkspaceDisplay() {
 }
 
 /******************
+* Sets org.gnome.shell.overrides.dynamic-workspaces schema to false
+*******************/
+function disableDynamicWorkspaces() {
+    let settings = global.get_overrides_settings();
+    settings.set_boolean('dynamic-workspaces', false);
+}
+
+/******************
  * tells Meta about the number of workspaces we want
  ******************/
 function modifyNumWorkspaces() {
@@ -1197,6 +1207,8 @@ function modifyNumWorkspaces() {
     // this forces the workspaces display to update itself to match the new
     // number of workspaces.
     global.screen.notify('n-workspaces');
+
+    disableDynamicWorkspaces();
 }
 
 function unmodifyNumWorkspaces() {

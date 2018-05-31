@@ -37,15 +37,15 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
-const KEY_ROWS = 'num-rows';
-const KEY_COLS = 'num-columns';
-const KEY_WRAPAROUND = 'wraparound';
-const KEY_WRAP_TO_SAME = 'wrap-to-same';
-const KEY_MAX_HFRACTION = 'max-screen-fraction';
-const KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
-const KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
-const KEY_RELATIVE_WORKSPACE_SWITCHING ="relative-workspace-switching";
-const KEY_PLACE_SWITCHER_BOTTOM = "place-switcher-bottom";
+var KEY_ROWS = 'num-rows';
+var KEY_COLS = 'num-columns';
+var KEY_WRAPAROUND = 'wraparound';
+var KEY_WRAP_TO_SAME = 'wrap-to-same';
+var KEY_MAX_HFRACTION = 'max-screen-fraction';
+var KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
+var KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
+var KEY_RELATIVE_WORKSPACE_SWITCHING ="relative-workspace-switching";
+var KEY_PLACE_SWITCHER_BOTTOM = "place-switcher-bottom";
 
 function init() {
     Convenience.initTranslations();
