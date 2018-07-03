@@ -955,6 +955,39 @@ function _replaceThumbnailsBoxActor (actorCallbackObject) {
     slider.actor.add_actor(thumbnailsBox.actor);
 }
 
+let switcher_placement_overriden = false;
+let bin_thumbnails = null;
+function overrideSwitcherPlacement(do_override) {
+    let controls = Main.overview._controls;
+    if (do_override && !switcher_placement_overriden) {
+        // Place the workspace switcher at the bottom //
+        //// Remove the thumbnails switcher from the overview
+        controls._group.remove_actor(controls._thumbnailsSlider.actor);
+        //// Add it again, but not to the main layout
+        bin_thumbnails = new St.Bin({
+            child: controls._thumbnailsSlider.actor,
+            x_align: St.Align.MIDDLE
+        });
+        Main.overview._overview.add(bin_thumbnails);
+        //// Refresh (not sure if this is needed)
+        refreshThumbnailsBox();
+        //// Record this modification
+        switcher_placement_overriden = true;
+    } else if (!do_override && switcher_placement_overriden) {
+        // Restore placement
+        //// Remove it from the from the overview outer layout
+        Main.overview._overview.remove_actor(bin_thumbnails);
+        bin_thumbnails.remove_actor(controls._thumbnailsSlider.actor);
+        bin_thumbnails.destroy();
+        //// Restore the switcher to its original location
+        controls._group.add_actor(controls._thumbnailsSlider.actor);
+        //// Refresh (not sure if this is needed)
+        refreshThumbnailsBox();
+        //// Record this modification
+        switcher_placement_overriden = false;
+    }
+}
+
 /**
  * We need to:
  * 1) override the scroll event on workspaces display to allow sideways
@@ -1274,6 +1307,11 @@ function enable() {
     signals.push(settings.connect('changed::' + KEY_COLS, nWorkspacesChanged));
     signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
     signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
+    
+    // Connect to the overlay key to modify the thumbnails box position if the user so desires
+    signals.push(global.display.connect('overlay-key', () => {
+        overrideSwitcherPlacement(settings.get_boolean(Prefs.KEY_PLACE_SWITCHER_BOTTOM));
+    }));
 }
 
 function disable() {

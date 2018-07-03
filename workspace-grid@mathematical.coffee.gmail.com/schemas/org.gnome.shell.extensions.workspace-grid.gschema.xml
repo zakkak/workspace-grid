@@ -33,6 +33,11 @@
       <summary>Whether to show workspace names in the workspace switcher popup</summary>
       <description>Whether to show workspace names in the workspace switcher popup</description>
     </key>
+    <key type="b" name="place-switcher-bottom">
+      <default>false</default>
+      <summary>Whether to place the workspace switcher at the bottom of the overview screen</summary>
+      <description>Whether to place the workspace switcher at the bottom of the overview screen</description>
+    </key>
     <key type="d" name="max-screen-fraction">
       <default>0.7</default>
       <range min="0" max="1.0"/>
