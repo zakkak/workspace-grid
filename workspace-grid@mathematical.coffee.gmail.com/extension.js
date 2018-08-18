@@ -259,6 +259,31 @@ function getWorkspaceSwitcherPopup() {
     return Main.wm._workspaceSwitcherPopup;
 }
 
+/* Same as: from.get_neighbor(direction).index();
+ * Workaround for GNOME 3.29.90.
+ * Bug report: https://gitlab.gnome.org/GNOME/mutter/issues/270
+ */
+function get_neighbor(direction, from) {
+    let [row, col] = indexToRowCol(from.index());
+
+    switch (direction) {
+        case LEFT:
+            col = Math.max(0, col - 1);
+            break;
+        case RIGHT:
+            col = Math.min(Utils.WS.getWS().workspace_grid.columns - 1, col + 1);
+            break;
+        case UP:
+            row = Math.max(0, row - 1);
+            break;
+        case DOWN:
+            row = Math.min(Utils.WS.getWS().workspace_grid.rows - 1, row + 1);
+            break;
+    }
+
+    return rowColToIndex(row, col);
+}
+
 function calculateScrollDirection(direction, scrollDirection) {
   if (scrollDirection === 'horizontal') {
     switch (direction) {
@@ -283,7 +308,7 @@ function calculateWorkspace(direction, wraparound, wrapToSame, wrapToSameScroll,
 
 
     let from = Utils.WS.getWS().get_active_workspace(),
-        to = from.get_neighbor(direction).index();
+        to = get_neighbor(direction, from);
 
     if (!wraparound || from.index() !== to) {
         return to;
