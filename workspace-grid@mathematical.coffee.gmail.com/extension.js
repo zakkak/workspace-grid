@@ -1132,7 +1132,12 @@ function unoverrideWorkspaceDisplay() {
 * Sets org.gnome.shell.overrides.dynamic-workspaces schema to false
 *******************/
 function disableDynamicWorkspaces() {
-    let settings = global.get_overrides_settings();
+    let settings;
+    // Override schemas are gone in GNOME 3.30
+    if (global.get_overrides_settings)
+        settings = global.get_overrides_settings()
+    else
+        settings = new Gio.Settings({ schema_id: 'org.gnome.mutter' });
     settings.set_boolean('dynamic-workspaces', false);
 }
 
