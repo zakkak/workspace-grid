@@ -93,16 +93,17 @@ these are things you need to know.
 
 ** Exported stuff
 
-   This extension exports a number of constants and functions to an
-   object ~global.screen.workspace_grid~ for your convenience.  (It
-   isn't particularly good code style as this "breaks the extension
+   This extension exports a number of constants and functions to an object
+   global.screen.workspace_grid (GNOME <= 3.28) or global.workspace_manager
+   (GNOME > 3.28) for your convenience.
+   (It isn't particularly good code style as this "breaks the extension
    barrier" so to speak - extensions are meant to be standalone and
    modular, but when multiple extensions have overlapping
    functionalities it makes sense to use another extension's
    functionality rather than re-implement it in your own).
 
    Note that the Workspace Grid extension must be enabled for this all to
-   work.  The ~global.screen.workspace_grid~ object contains:
+   work. The ~global.{screen,workspace_manager}.workspace_grid~ object contains:
 
    (Exported Constants)
 
@@ -118,9 +119,9 @@ these are things you need to know.
      being either (~Directions.~)~UP~, ~LEFT~, ~RIGHT~ or ~DOWN~ (see
      ~Directions~).
    - ~rowColToIndex~ : converts the row/column into an index for use
-     with (e.g.) ~global.screen.get_workspace_by_index(i)~
+     with (e.g.) ~global.{screen,workspace_manager}.get_workspace_by_index(i)~
    - ~indexToRowCol~ : converts an index (~0 to
-     global.screen.n_workspaces-1~) to a row and column
+     global.{screen,workspace_manager}.n_workspaces-1~) to a row and column
    - ~calculateWorkspace~ : calculates the index of the workspace
      adjacent in the specified direction to the current one.
    - ~getWorkspaceSwitcherPopup~ : retrieves our workspace switcher
@@ -130,25 +131,25 @@ these are things you need to know.
    For example, to move to the workspace below us:
 
 #+BEGIN_EXAMPLE
-    const WorkspaceGrid = global.screen.workspace_grid;
+    const WorkspaceGrid = global.{screen,workspace_manager}.workspace_grid;
     WorkspaceGrid.moveWorkspace(WorkspaceGrid.Directions.DOWN);
 #+END_EXAMPLE
 
 ** Listening to Workspace Grid
    Say you want to know the number of rows/columns of workspaces in
    your extension. Then you have to wait for this extension to load
-   and populate ~global.screen.workspace_grid~.
+   and populate ~global.{screen,workspace_manager}.workspace_grid~.
 
    When the Workspace Grid extension enables or disables it fires a
-   ~'notify::n_workspaces'~ signal on global.screen.  You can connect
-   to this and check for the existence (or removal) of
-   ~global.screen.workspace_grid~.
+   ~'notify::n_workspaces'~ signal on global.{screen,workspace_manager}.
+   You can connect to this and check for the existence (or removal) of
+   ~global.{screen,workspace_manager}.workspace_grid~.
 
    e.g.:
 
 #+BEGIN_EXAMPLE
-    let ID = global.screen.connect('notify::n-workspaces', function () {
-        if (global.screen.workspace_grid) {
+    let ID = global.workspace_manager.connect('notify::n-workspaces', function () {
+        if (global.workspace_manager.workspace_grid) {
             // then we can use workspace_grid.rows, cols, etc
         } else {
             // remember, your extension should be able to handle this one being
