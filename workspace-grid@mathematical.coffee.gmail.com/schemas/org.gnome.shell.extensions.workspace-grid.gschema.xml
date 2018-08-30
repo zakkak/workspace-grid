@@ -45,6 +45,11 @@
       <summary>Maximum fraction of the screen workspace thumbnails may take up before collapsing in the overview.</summary>
       <description>Maximum (horizontal) fraction of the screen the workspace thumbnails are allowed to take up in the overview before the workspace thumbnail box intialised collapsed (hover to open).</description>
     </key>
+    <key type="s" name="scroll-direction">
+      <default>"horizontal"</default>
+      <summary>The direction that scroll event follows</summary>
+      <description>The direction that scroll event follows.</description>
+    </key>
 
   </schema>
 </schemalist>
