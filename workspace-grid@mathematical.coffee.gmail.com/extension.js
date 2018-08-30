@@ -158,6 +158,7 @@ const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
 const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
 const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
 const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
+const KEY_SCROLL_DIRECTION = Prefs.KEY_SCROLL_DIRECTION;
 
 const OVERRIDE_SCHEMA = 'org.gnome.shell.overrides'
 
@@ -252,8 +253,25 @@ function getWorkspaceSwitcherPopup() {
     return Main.wm._workspaceSwitcherPopup;
 }
 
+function calculateScrollDirection(direction, scrollDirection) {
+  if (scrollDirection === 'horizontal') {
+    switch (direction) {
+      case UP:
+        direction = LEFT;
+        break;
+      case DOWN:
+        direction = RIGHT;
+        break;
+    }
+  }
+  return direction;
+}
+
 // calculates the workspace index in that direction.
-function calculateWorkspace(direction, wraparound, wrapToSame) {
+function calculateWorkspace(direction, wraparound, wrapToSame, overrideScrollDirection) {
+    if (overrideScrollDirection)
+        direction = calculateScrollDirection(direction, settings.get_string(KEY_SCROLL_DIRECTION));
+
     let from = global.screen.get_active_workspace(),
         to = from.get_neighbor(direction).index();
 
@@ -308,7 +326,9 @@ function calculateWorkspace(direction, wraparound, wrapToSame) {
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
 function moveWorkspace(direction) {
-    let newWs = actionMoveWorkspace(direction);
+    // if we should override the scroll direction
+    let overrideScrollDirection = false;
+    let newWs = actionMoveWorkspace(direction, overrideScrollDirection);
 
     // show workspace switcher
     if (!Main.overview.visible) {
@@ -372,7 +392,7 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
         direction = Meta.MotionDirection.UP;
     } else {
         if (action == 'switch') {
-            newWs = actionMoveWorkspace(direction);
+            newWs = actionMoveWorkspace(direction, false);
         } else {
             newWs = actionMoveWindow(window, direction);
         }
@@ -384,7 +404,7 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
     }
 }
 
-function actionMoveWorkspace(destination) {
+function actionMoveWorkspace(destination, overrideScrollDirection = true) {
     let from = global.screen.get_active_workspace_index();
 
     let to;
@@ -394,7 +414,8 @@ function actionMoveWorkspace(destination) {
     else
         to = calculateWorkspace(destination,
                                 settings.get_boolean(KEY_WRAPAROUND),
-                                settings.get_boolean(KEY_WRAP_TO_SAME));
+                                settings.get_boolean(KEY_WRAP_TO_SAME),
+                                overrideScrollDirection);
 
     let ws = global.screen.get_workspace_by_index(to);
 
@@ -976,23 +997,24 @@ function overrideWorkspaceDisplay() {
     wvStorage._init = WorkspacesView.WorkspacesView.prototype._init;
     WorkspacesView.WorkspacesView.prototype._init = function () {
         wvStorage._init.apply(this, arguments);
-        Main.overview.connect('scroll-event', Lang.bind(this, function _horizontalScroll(actor, event) {
-                // same as the original, but for LEFT/RIGHT
-                // if (!actor.mapped)
-                //     return false;
-                let wsIndex =  global.screen.get_active_workspace_index();
+        // Main.overview.connect('scroll-event', Lang.bind(this, _horizontalScroll));
+        Main.overview.connect('scroll-event', Lang.bind(this, _scrollHandler));
 
-                switch (event.get_scroll_direction()) {
-                    case Clutter.ScrollDirection.UP:
-                        global.screen.workspace_grid.actionMoveWorkspace(wsIndex-1);
-                        return Clutter.EVENT_STOP;
-                    case Clutter.ScrollDirection.DOWN:
-                        global.screen.workspace_grid.actionMoveWorkspace(wsIndex+1);
-                        return Clutter.EVENT_STOP;
-                }
+        function _scrollHandler (actor, event) {
+            // same as the original, but for TOP/DOWN on grid
+            let wsIndex = global.screen.get_active_workspace_index();
 
-                return Clutter.EVENT_PROPAGATE;
-            }));
+            switch (event.get_scroll_direction()) {
+                case Clutter.ScrollDirection.UP:
+                    global.screen.workspace_grid.actionMoveWorkspace(Meta.MotionDirection.UP);
+                    return Clutter.EVENT_STOP;
+                case Clutter.ScrollDirection.DOWN:
+                    global.screen.workspace_grid.actionMoveWorkspace(Meta.MotionDirection.DOWN);
+                    return Clutter.EVENT_STOP;
+            }
+
+            return Clutter.EVENT_PROPAGATE;
+        }
     };
 
 
