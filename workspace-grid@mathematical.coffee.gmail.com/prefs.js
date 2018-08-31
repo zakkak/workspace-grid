@@ -41,6 +41,7 @@ var KEY_ROWS = 'num-rows';
 var KEY_COLS = 'num-columns';
 var KEY_WRAPAROUND = 'wraparound';
 var KEY_WRAP_TO_SAME = 'wrap-to-same';
+var KEY_WRAP_TO_SAME_SCROLL = 'wrap-to-same-scroll';
 var KEY_MAX_HFRACTION = 'max-screen-fraction';
 var KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
 var KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
@@ -93,8 +94,15 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this._sameRowCol = this.addBoolean(
             _(" ... and wrap to the same row/col (as opposed to the next/previous)?"),
             KEY_WRAP_TO_SAME);
+        this._sameRowColScroll = this.addBoolean(
+            _("     ... wrap to same also for mouse scrolling?"),
+            KEY_WRAP_TO_SAME_SCROLL);
+        this._sameRowColScroll.set_sensitive(this._sameRowCol.active);
         toggle.connect('notify::active', Lang.bind(this, function(widget) {
             this._sameRowCol.set_sensitive(widget.active);
+        }));
+        this._sameRowCol.connect('notify::active', Lang.bind(this, function(widget) {
+            this._sameRowColScroll.set_sensitive(widget.active);
         }));
 
         this.addBoolean(_("Show workspace labels in the switcher?"),
