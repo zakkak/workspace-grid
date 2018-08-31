@@ -326,7 +326,14 @@ function calculateWorkspace(direction, wraparound, wrapToSame, overrideScrollDir
  *        https://extensions.gnome.org/extension/29/workspace-navigator/)
  */
 function moveWorkspace(direction) {
-    // if we should override the scroll direction
+    // This is a boolean passed to the actionMoveWorkspace function.
+    // If overrideScrollDirection is TRUE and scroll-direction is HORIZONTAL,
+    // it overrides the UP and DOWN directions to LEFT and RIGHT.
+    // This boolean defaults to TRUE.
+    //
+    // Here this behaviour is not needed because we are handling the keyboard
+    // arrow shortcuts and all directions are valid. So we will set to FALSE.
+    //
     let overrideScrollDirection = false;
     let newWs = actionMoveWorkspace(direction, overrideScrollDirection);
 
@@ -997,9 +1004,26 @@ function overrideWorkspaceDisplay() {
     wvStorage._init = WorkspacesView.WorkspacesView.prototype._init;
     WorkspacesView.WorkspacesView.prototype._init = function () {
         wvStorage._init.apply(this, arguments);
-        // Main.overview.connect('scroll-event', Lang.bind(this, _horizontalScroll));
         Main.overview.connect('scroll-event', Lang.bind(this, _scrollHandler));
-
+        /* FelipeMarinho97 - <felipevm97@gmail.com>:
+         *
+         * This function **_scrollHandler**, uses a exported function
+         * global.screen.workspace_grid.actionMoveWorkspace.
+         * For controlling scroll-direction, we have two options:
+         *   1 - create two different handlers and choose the right one according
+         * to the value of the "scroll-direction" option.
+         *   2 - let the actionMoveWorkspace function do all the job.
+         *
+         * If we put the horizontal or vertical logic inside two different handlers,
+         * there will be no way to other extensions use this feature.
+         * They will have to implement their own handlers too. Because of it,
+         * I decided that is better delegate all the necessary logic to the exported function.
+         * So, now using a generic scroll handler (much like the original gnome-shell handler),
+         * its possible to achieve the desired funcionality.
+         *
+         * This decision eventually made the code needed for integration with
+         * other extensions very reduced.
+         */
         function _scrollHandler (actor, event) {
             // same as the original, but for TOP/DOWN on grid
             let wsIndex = global.screen.get_active_workspace_index();
@@ -1110,8 +1134,8 @@ function unoverrideWorkspaceDisplay() {
     WorkspacesView.WorkspacesView.prototype._init = wvStorage._init;
     for (let i = 0; i < wD._workspacesViews.length; ++i) {
         let wV = wD._workspacesViews[i];
-        if (wV._horizontalScroll) {
-            wV.disconnect(wV._horizontalScroll);
+        if (wV._scrollHandler) {
+            wV.disconnect(wV._scrollHandler);
         }
     }
 
