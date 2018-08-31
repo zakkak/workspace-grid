@@ -108,6 +108,10 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this.addBoolean(_("Show workspace labels in the switcher?"),
             KEY_SHOW_WORKSPACE_LABELS);
 
+        this.addTextComboBox("Scroll Direction: ", KEY_SCROLL_DIRECTION,
+            [ { name: "Horizontal", value: "horizontal"},
+              { name: "Vertical", value: "vertical" } ]);
+
         item = new Gtk.Label({
             label: _("The following settings determine how much horizontal " +
                     "space the workspaces box\n in the overview can take up, " +
@@ -120,49 +124,6 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
                 0, 1, 0.05);
         this.addScale(_("Maximum width (fraction) before collapse:"),
                 KEY_MAX_HFRACTION_COLLAPSE, false, 0, 1, 0.05);
-
-
-        this._listStore = new Gtk.ListStore();
-        this._listStore.set_column_types ([
-            GObject.TYPE_STRING,
-            GObject.TYPE_STRING]);
-
-        let options = [
-            { name: "Horizontal", value: "horizontal"  },
-            { name: "Vertical", value: "vertical" }];
-        let defaultOption = 0;
-
-        for (let i = 0; i < options.length; i++ ) {
-            let option = options[i];
-            let iter = this._listStore.append();
-            this._listStore.set (iter, [0], [option.name]);
-            if ('value' in option) {
-                this._listStore.set (iter, [1], [option.value]);
-                if (option.value === this._settings.get_string(KEY_SCROLL_DIRECTION))
-                    defaultOption = i;
-            }
-        }
-
-      this._comboBox = new Gtk.ComboBox({
-          model: this._listStore});
-      item = this._comboBox;
-
-      item.set_active(defaultOption);
-
-      item.connect('changed', Lang.bind(this, function () {
-        let activeItem = this._comboBox.get_active();
-        this._settings.set_string(KEY_SCROLL_DIRECTION, options[activeItem].value)
-      }));
-
-      let rendererText = new Gtk.CellRendererText();
-
-      item.pack_start (rendererText, false);
-
-      item.add_attribute (rendererText, "text", 0);
-
-      this.addRow("Scroll Direction:", item);
-
-
     },
 
     addBoolean: function (text, key) {
@@ -264,6 +225,24 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
             }));
         }
         return this.addRow(text, hscale, true);
+    },
+
+    addTextComboBox: function (text, key, options) {
+      let item = new Gtk.ComboBoxText();
+
+      for (let i = 0; i < options.length; i++ ) {
+        item.append_text(options[i].name);
+        if (options[i].value === this._settings.get_string(key))
+              activeOption = i;
+      }
+      item.set_active(activeOption);
+
+      item.connect('changed', Lang.bind(this, function () {
+        let activeItem = item.get_active();
+        this._settings.set_string(key, options[activeItem].value);
+      }));
+
+      return this.addRow(text, item);
     },
 
     addItem: function (widget, col, colspan, rowspan) {
