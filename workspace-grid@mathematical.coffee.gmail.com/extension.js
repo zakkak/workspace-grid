@@ -155,6 +155,7 @@ const KEY_ROWS = Prefs.KEY_ROWS;
 const KEY_COLS = Prefs.KEY_COLS;
 const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
 const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
+const KEY_WRAP_TO_SAME_SCROLL = Prefs.KEY_WRAP_TO_SAME_SCROLL;
 const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
 const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
 const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
@@ -268,9 +269,13 @@ function calculateScrollDirection(direction, scrollDirection) {
 }
 
 // calculates the workspace index in that direction.
-function calculateWorkspace(direction, wraparound, wrapToSame, overrideScrollDirection) {
-    if (overrideScrollDirection)
+function calculateWorkspace(direction, wraparound, wrapToSame, wrapToSameScroll, overrideScrollDirection) {
+    if (overrideScrollDirection) {
         direction = calculateScrollDirection(direction, settings.get_string(KEY_SCROLL_DIRECTION));
+        if (!wrapToSameScroll)
+            wrapToSame = wrapToSameScroll;
+   }
+
 
     let from = global.screen.get_active_workspace(),
         to = from.get_neighbor(direction).index();
@@ -422,6 +427,7 @@ function actionMoveWorkspace(destination, overrideScrollDirection = true) {
         to = calculateWorkspace(destination,
                                 settings.get_boolean(KEY_WRAPAROUND),
                                 settings.get_boolean(KEY_WRAP_TO_SAME),
+                                settings.get_boolean(KEY_WRAP_TO_SAME_SCROLL),
                                 overrideScrollDirection);
 
     let ws = global.screen.get_workspace_by_index(to);
