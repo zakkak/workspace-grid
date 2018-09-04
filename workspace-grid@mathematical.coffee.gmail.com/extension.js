@@ -31,8 +31,9 @@
  * If you wish to see if your extension is compatible with this, note:
  *
  * This extension exports a number of constants and functions to an object
- * global.screen.workspace_grid for your convenience. Note that this extension
- * must be enabled for this all to work. global.screen.workspace_grid contains:
+ * Utils.WS.getWS().workspace_grid for your convenience. Note that this
+ * extension must be enabled for this all to work.
+ * Utils.WS.getWS().workspace_grid contains:
  *
  *   (Exported Constants)
  *   - rows     : number of rows of workspaces
@@ -42,16 +43,16 @@
  *   - moveWorkspace : switches workspaces in the direction specified, being
  *                     either UP, LEFT, RIGHT or DOWN (see Meta.MotionDirection).
  *   - rowColToIndex : converts the row/column into an index for use with (e.g.)
- *                     global.screen.get_workspace_by_index(i)
- *   - indexToRowCol : converts an index (0 to global.screen.n_workspaces-1) to
- *                     a row and column
+ *                     Utils.WS.getWS().get_workspace_by_index(i)
+ *   - indexToRowCol : converts an index (0 to Utils.WS.getWS().n_workspaces-1)
+ *                     to a row and column
  *   - getWorkspaceSwitcherPopup : gets our workspace switcher popup so you
  *                                 can show it if you want
  *   - calculateWorkspace : returns the workspace index in the specified direction
  *                          to the current, taking into account wrapping.
  *
  * For example, to move to the workspace below us:
- *     const WorkspaceGrid = global.screen.workspace_grid;
+ *     const WorkspaceGrid = Utils.WS.getWS().workspace_grid;
  *     WorkspaceGrid.moveWorkspace(Meta.MotionDirection.DOWN);
  *
  * I am happy to try help/give an opinion/improve this extension to try make it
@@ -61,13 +62,13 @@
  * ---------------------------
  * Say you want to know the number of rows/columns of workspaces in your
  * extension. Then you have to wait for this extension to load and populate
- * global.screen.workspace_grid.
+ * Utils.WS.getWS().workspace_grid.
  *
  * When the workspace_grid extension enables or disables it fires a
  *  'notify::n_workspaces' signal on global.screen.
  *
  * You can connect to this and check for the existence (or removal) of
- * global.screen.workspace_grid.
+ * Utils.WS.getWS().workspace_grid.
  *
  * Further notes
  * -------------
@@ -150,6 +151,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const Prefs = Me.imports.prefs;
 const MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
+const Utils = Me.imports.utils;
 
 const KEY_ROWS = Prefs.KEY_ROWS;
 const KEY_COLS = Prefs.KEY_COLS;
@@ -212,15 +214,15 @@ let settings = 0;
 /***************
  * Helper functions
  ***************/
-/* Converts an index (from 0 to global.screen.n_workspaces) into [row, column]
+/* Converts an index (from 0 to Utils.WS.getWS().n_workspaces) into [row, column]
  * being the row and column of workspace `index` according to the user's layout.
  *
  * Row and column start from 0.
  */
 function indexToRowCol(index) {
     // row-major. 0-based.
-    return [Math.floor(index / global.screen.workspace_grid.columns),
-       index % global.screen.workspace_grid.columns];
+    return [Math.floor(index / Utils.WS.getWS().workspace_grid.columns),
+       index % Utils.WS.getWS().workspace_grid.columns];
 }
 
 /* Converts a row and column (0-based) into the index of that workspace.
@@ -230,7 +232,7 @@ function indexToRowCol(index) {
  */
 function rowColToIndex(row, col) {
     // row-major. 0-based.
-    let idx = row * global.screen.workspace_grid.columns + col;
+    let idx = row * Utils.WS.getWS().workspace_grid.columns + col;
     if (idx >= MAX_WORKSPACES) {
         idx = -1;
     }
@@ -252,10 +254,35 @@ function getWorkspaceSwitcherPopup() {
     return Main.wm._workspaceSwitcherPopup;
 }
 
+/* Same as: from.get_neighbor(direction).index();
+ * Workaround for GNOME 3.29.90.
+ * Bug report: https://gitlab.gnome.org/GNOME/mutter/issues/270
+ */
+function get_neighbor(direction, from) {
+    let [row, col] = indexToRowCol(from.index());
+
+    switch (direction) {
+        case LEFT:
+            col = Math.max(0, col - 1);
+            break;
+        case RIGHT:
+            col = Math.min(Utils.WS.getWS().workspace_grid.columns - 1, col + 1);
+            break;
+        case UP:
+            row = Math.max(0, row - 1);
+            break;
+        case DOWN:
+            row = Math.min(Utils.WS.getWS().workspace_grid.rows - 1, row + 1);
+            break;
+    }
+
+    return rowColToIndex(row, col);
+}
+
 // calculates the workspace index in that direction.
 function calculateWorkspace(direction, wraparound, wrapToSame) {
-    let from = global.screen.get_active_workspace(),
-        to = from.get_neighbor(direction).index();
+    let from = Utils.WS.getWS().get_active_workspace(),
+        to = get_neighbor(direction, from);
 
     if (!wraparound || from.index() !== to) {
         return to;
@@ -266,7 +293,7 @@ function calculateWorkspace(direction, wraparound, wrapToSame) {
     switch (direction) {
         case LEFT:
             // we must be at the start of the row. go to the end of the row.
-            col = global.screen.workspace_grid.columns - 1;
+            col = Utils.WS.getWS().workspace_grid.columns - 1;
             if (!wrapToSame) row--;
             break;
         case RIGHT:
@@ -276,7 +303,7 @@ function calculateWorkspace(direction, wraparound, wrapToSame) {
             break;
         case UP:
             // we must be at the top of the col. go to the bottom of the same col.
-            row = global.screen.workspace_grid.rows - 1;
+            row = Utils.WS.getWS().workspace_grid.rows - 1;
             if (!wrapToSame) col--;
             break;
         case DOWN:
@@ -286,9 +313,9 @@ function calculateWorkspace(direction, wraparound, wrapToSame) {
             break;
     }
     if (col < 0 || row < 0) {
-        to = global.screen.n_workspaces - 1;
-    } else if (col > global.screen.workspace_grid.columns - 1 ||
-               row > global.screen.workspace_grid.rows - 1) {
+        to = Utils.WS.getWS().n_workspaces - 1;
+    } else if (col > Utils.WS.getWS().workspace_grid.columns - 1 ||
+               row > Utils.WS.getWS().workspace_grid.rows - 1) {
         to = 0;
     } else {
         to = rowColToIndex(row, col);
@@ -323,11 +350,25 @@ function moveWorkspace(direction) {
  * This is the same as WindowManager._showWorkspaceSwitcher but we don't
  * filter out RIGHT/LEFT actions like they do.
  */
-function showWorkspaceSwitcher(display, screen, window, binding) {
+function showWorkspaceSwitcher(display, arg2, arg3, arg4) {
+    let screen;
+    let window;
+    let binding;
+    // Note: in v3.30, the 2nd arg (screen that we don't need) has been removed
+    if (Utils.isVersionAbove(3, 28)) {
+        screen = display.get_workspace_manager();
+        window = arg2;
+        binding = arg3;
+    } else {
+        screen = arg2;
+        window = arg3;
+        binding = arg4;
+    }
+
     if (!Main.sessionMode.hasWorkspaces)
         return;
 
-    if (global.screen.n_workspaces === 1)
+    if (Utils.WS.getWS().n_workspaces === 1)
         return;
 
     let [action,,,target] = binding.get_name().split('-');
@@ -356,9 +397,9 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
         direction = Meta.MotionDirection[target.toUpperCase()];
     } else if (target > 0) {
         target--;
-		if (settings.get_boolean(Prefs.KEY_RELATIVE_WORKSPACE_SWITCHING)) {
-			target = target + Math.floor(screen.get_active_workspace_index() / global.screen.workspace_grid.columns ) * global.screen.workspace_grid.columns ;
-		}
+        if (settings.get_boolean(Prefs.KEY_RELATIVE_WORKSPACE_SWITCHING)) {
+            target = target + Math.floor(screen.get_active_workspace_index() / Utils.WS.getWS().workspace_grid.columns) * Utils.WS.getWS().workspace_grid.columns ;
+        }
         newWs = screen.get_workspace_by_index(target);
     }
 
@@ -385,7 +426,7 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
 }
 
 function actionMoveWorkspace(destination) {
-    let from = global.screen.get_active_workspace_index();
+    let from = Utils.WS.getWS().get_active_workspace_index();
 
     let to;
     // destination >= 0 is workspace index, otherwise its a direction
@@ -396,11 +437,11 @@ function actionMoveWorkspace(destination) {
                                 settings.get_boolean(KEY_WRAPAROUND),
                                 settings.get_boolean(KEY_WRAP_TO_SAME));
 
-    let ws = global.screen.get_workspace_by_index(to);
+    let ws = Utils.WS.getWS().get_workspace_by_index(to);
 
     // if ws is null, the workspace does't exist, so keep on actual workspace
     if (ws == null) {
-        ws = global.screen.get_active_workspace();
+        ws = Utils.WS.getWS().get_active_workspace();
     }
 
     if (to !== from) {
@@ -419,9 +460,9 @@ function actionMoveWindow(window, destination) {
                                 settings.get_boolean(KEY_WRAPAROUND),
                                 settings.get_boolean(KEY_WRAP_TO_SAME));
 
-    let ws = global.screen.get_workspace_by_index(to);
+    let ws = Utils.WS.getWS().get_workspace_by_index(to);
 
-    if (to !== global.screen.get_active_workspace_index()) {
+    if (to !== Utils.WS.getWS().get_active_workspace_index()) {
         Main.wm._movingWindow = window;
         window.change_workspace(ws);
         global.display.clear_mouse_mode();
@@ -641,7 +682,7 @@ const ThumbnailsBox = new Lang.Class({
 
     _activeWorkspaceChanged: function () {
         let thumbnail;
-        let activeWorkspace = global.screen.get_active_workspace();
+        let activeWorkspace = Utils.WS.getWS().get_active_workspace();
         for (let i = 0; i < this._thumbnails.length; i++) {
             if (this._thumbnails[i].metaWorkspace === activeWorkspace) {
                 thumbnail = this._thumbnails[i];
@@ -672,7 +713,7 @@ const ThumbnailsBox = new Lang.Class({
         let themeNode    = this.actor.get_theme_node();
 
         let spacing      = themeNode.get_length('spacing');
-        let nWorkspaces  = global.screen.workspace_grid.rows;
+        let nWorkspaces  = Utils.WS.getWS().workspace_grid.rows;
         let totalSpacing = (nWorkspaces - 1) * spacing;
 
         alloc.min_size     = totalSpacing;
@@ -694,8 +735,8 @@ const ThumbnailsBox = new Lang.Class({
 
         let themeNode = this.actor.get_theme_node(),
             spacing = this.actor.get_theme_node().get_length('spacing'),
-            nRows = global.screen.workspace_grid.rows,
-            nCols = global.screen.workspace_grid.columns,
+            nRows = Utils.WS.getWS().workspace_grid.rows,
+            nCols = Utils.WS.getWS().workspace_grid.columns,
             totalSpacingX = (nCols - 1) * spacing,
             totalSpacingY = (nRows - 1) * spacing,
             availY = forHeight - totalSpacingY,
@@ -736,8 +777,8 @@ const ThumbnailsBox = new Lang.Class({
         let spacing = this.actor.get_theme_node().get_length('spacing');
 
         // Compute the scale we'll need once everything is updated
-        let nCols = global.screen.workspace_grid.columns,
-            nRows = global.screen.workspace_grid.rows,
+        let nCols = Utils.WS.getWS().workspace_grid.columns,
+            nRows = Utils.WS.getWS().workspace_grid.rows,
             totalSpacingY = (nRows - 1) * spacing,
             availY = (contentBox.y2 - contentBox.y1) - totalSpacingY;
 
@@ -788,7 +829,7 @@ const ThumbnailsBox = new Lang.Class({
             indicatorY2,
             indicatorX2,
         // when not animating, the workspace position overrides this._indicatorY
-            indicatorWorkspace = !this._animatingIndicator ? global.screen.get_active_workspace() : null,
+            indicatorWorkspace = !this._animatingIndicator ? Utils.WS.getWS().get_active_workspace() : null,
             indicatorThemeNode = this._indicator.get_theme_node(),
 
             indicatorTopFullBorder = indicatorThemeNode.get_padding(St.Side.TOP) + indicatorThemeNode.get_border_width(St.Side.TOP),
@@ -980,14 +1021,14 @@ function overrideWorkspaceDisplay() {
                 // same as the original, but for LEFT/RIGHT
                 // if (!actor.mapped)
                 //     return false;
-                let wsIndex =  global.screen.get_active_workspace_index();
+                let wsIndex =  Utils.WS.getWS().get_active_workspace_index();
 
                 switch (event.get_scroll_direction()) {
                     case Clutter.ScrollDirection.UP:
-                        global.screen.workspace_grid.actionMoveWorkspace(wsIndex-1);
+                        Utils.WS.getWS().workspace_grid.actionMoveWorkspace(wsIndex-1);
                         return Clutter.EVENT_STOP;
                     case Clutter.ScrollDirection.DOWN:
-                        global.screen.workspace_grid.actionMoveWorkspace(wsIndex+1);
+                        Utils.WS.getWS().workspace_grid.actionMoveWorkspace(wsIndex+1);
                         return Clutter.EVENT_STOP;
                 }
 
@@ -1116,7 +1157,13 @@ function unoverrideWorkspaceDisplay() {
 * Sets org.gnome.shell.overrides.dynamic-workspaces schema to false
 *******************/
 function disableDynamicWorkspaces() {
-    let settings = global.get_overrides_settings();
+    let settings;
+    // Override schemas are gone in GNOME 3.30
+    if (Utils.isVersionAbove(3, 28)) {
+        settings = new Gio.Settings({ schema_id: 'org.gnome.mutter' });
+    } else {
+        settings = global.get_overrides_settings()
+    }
     settings.set_boolean('dynamic-workspaces', false);
 }
 
@@ -1126,15 +1173,15 @@ function disableDynamicWorkspaces() {
 function modifyNumWorkspaces() {
     /// Setting the number of workspaces.
     Meta.prefs_set_num_workspaces(
-        global.screen.workspace_grid.rows * global.screen.workspace_grid.columns
+        Utils.WS.getWS().workspace_grid.rows * Utils.WS.getWS().workspace_grid.columns
     );
 
     /* NOTE: in GNOME 3.4, 3.6, 3.8, Meta.prefs_set_num_workspaces has
      * *no effect* if Meta.prefs_get_dynamic_workspaces is true.
      * (see mutter/src/core/screen.c prefs_changed_callback).
      * To *actually* increase/decrease the number of workspaces (to fire
-     * notify::n-workspaces), we must use global.screen.append_new_workspace and
-     * global.screen.remove_workspace.
+     * notify::n-workspaces), we must use Utils.WS.getWS().append_new_workspace and
+     * Utils.WS.getWS().remove_workspace.
      *
      * We could just set org.gnome.shell.overrides.dynamic-workspaces to false
      * but then we can't drag and drop windows between workspaces (supposedly a
@@ -1145,17 +1192,17 @@ function modifyNumWorkspaces() {
      * drag/drop to create new workspaces (with the placeholder animation),
      * so I'll stick to this method for now.
      */
-    let newtotal = (global.screen.workspace_grid.rows *
-        global.screen.workspace_grid.columns);
-    if (global.screen.n_workspaces < newtotal) {
-        for (let i = global.screen.n_workspaces; i < newtotal; ++i) {
-            global.screen.append_new_workspace(false,
+    let newtotal = (Utils.WS.getWS().workspace_grid.rows *
+        Utils.WS.getWS().workspace_grid.columns);
+    if (Utils.WS.getWS().n_workspaces < newtotal) {
+        for (let i = Utils.WS.getWS().n_workspaces; i < newtotal; ++i) {
+            Utils.WS.getWS().append_new_workspace(false,
                     global.get_current_time());
         }
-    } else if (global.screen.n_workspaces > newtotal) {
-        for (let i = global.screen.n_workspaces - 1; i >= newtotal; --i) {
-            global.screen.remove_workspace(
-                    global.screen.get_workspace_by_index(i),
+    } else if (Utils.WS.getWS().n_workspaces > newtotal) {
+        for (let i = Utils.WS.getWS().n_workspaces - 1; i >= newtotal; --i) {
+            Utils.WS.getWS().remove_workspace(
+                    Utils.WS.getWS().get_workspace_by_index(i),
                     global.get_current_time()
             );
         }
@@ -1163,16 +1210,16 @@ function modifyNumWorkspaces() {
 
     // This affects workspace.get_neighbor() (only exposed in 3.8+) and appears
     // to do not much else. We'll do it anyway just in case.
-    global.screen.override_workspace_layout(
-        Meta.ScreenCorner.TOPLEFT, // workspace 0
+    Utils.WS.getWS().override_workspace_layout(
+        Utils.WS.getCorner().TOPLEFT, // workspace 0
         false, // true == lay out in columns. false == lay out in rows
-        global.screen.workspace_grid.rows,
-        global.screen.workspace_grid.columns
+        Utils.WS.getWS().workspace_grid.rows,
+        Utils.WS.getWS().workspace_grid.columns
     );
 
     // this forces the workspaces display to update itself to match the new
     // number of workspaces.
-    global.screen.notify('n-workspaces');
+    Utils.WS.getWS().notify('n-workspaces');
 
     disableDynamicWorkspaces();
 }
@@ -1181,8 +1228,8 @@ function unmodifyNumWorkspaces() {
     // restore original number of workspaces
     Meta.prefs_set_num_workspaces(nWorkspaces);
 
-    global.screen.override_workspace_layout(
-        Meta.ScreenCorner.TOPLEFT, // workspace 0
+    Utils.WS.getWS().override_workspace_layout(
+        Utils.WS.getCorner().TOPLEFT, // workspace 0
         true, // true == lay out in columns. false == lay out in rows
         nWorkspaces,
         1 // columns
@@ -1191,7 +1238,7 @@ function unmodifyNumWorkspaces() {
 
 /******************
  * Store rows/cols of workspaces, convenience functions to
- * global.screen.workspace_grid
+ * Utils.WS.getWS().workspace_grid
  * such that if other extension authors want to they can use them.
  *
  * Exported constants:
@@ -1200,8 +1247,8 @@ function unmodifyNumWorkspaces() {
  *
  * Exported functions:
  * rowColToIndex : converts the row/column into an index for use with (e.g.)
- *                 global.screen.get_workspace_by_index(i)
- * indexToRowCol : converts an index (0 to global.screen.n_workspaces-1) to a
+ *                 Utils.WS.getWS().get_workspace_by_index(i)
+ * indexToRowCol : converts an index (0 to Utils.WS.getWS().n_workspaces-1) to a
  *                 row and column
  * getWorkspaceSwitcherPopup : gets our workspace switcher popup so you
  *                             can show it if you want
@@ -1211,7 +1258,7 @@ function unmodifyNumWorkspaces() {
  *                 UP, LEFT, RIGHT or DOWN (see Meta.MotionDirection).
  ******************/
 function exportFunctionsAndConstants() {
-    global.screen.workspace_grid = {
+    Utils.WS.getWS().workspace_grid = {
         rows: settings.get_int(KEY_ROWS),
         columns: settings.get_int(KEY_COLS),
 
@@ -1229,13 +1276,13 @@ function exportFunctionsAndConstants() {
             MAX_WORKSPACES) {
         log("WARNING [workspace-grid]: You can have at most 36 workspaces, " +
                 "will ignore the rest");
-        global.screen.workspace_grid.rows = Math.ceil(
-                MAX_WORKSPACES / global.screen.workspace_grid.columns);
+        Utils.WS.getWS().workspace_grid.rows = Math.ceil(
+                MAX_WORKSPACES / Utils.WS.getWS().workspace_grid.columns);
     }
 }
 
 function unexportFunctionsAndConstants() {
-    delete global.screen.workspace_grid;
+    delete Utils.WS.getWS().workspace_grid;
 }
 
 /***************************
@@ -1290,5 +1337,5 @@ function disable() {
 
     // just in case, let everything else get used to the new number of
     // workspaces.
-    global.screen.notify('n-workspaces');
+    Utils.WS.getWS().notify('n-workspaces');
 }
