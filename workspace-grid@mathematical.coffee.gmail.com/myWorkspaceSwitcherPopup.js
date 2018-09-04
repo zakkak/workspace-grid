@@ -26,7 +26,6 @@ const Clutter = imports.gi.Clutter;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me             = ExtensionUtils.getCurrentExtension();
 const Prefs          = Me.imports.prefs;
-const Utils          = Me.imports.utils;
 
 const WorkspaceSwitcherPopup = imports.ui.workspaceSwitcherPopup;
 
@@ -52,7 +51,7 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
     _getPreferredHeight : function (actor, forWidth, alloc) {
         let children    = this._list.get_children(),
             primary     = Main.layoutManager.primaryMonitor,
-            nrows       = Utils.WS.getWS().workspace_grid.rows,
+            nrows       = global.screen.workspace_grid.rows,
             availHeight = primary.height,
             height      = 0,
             spacing     = this._itemSpacing * (nrows - 1);
@@ -62,8 +61,8 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
         availHeight -= this._container.get_theme_node().get_vertical_padding();
         availHeight -= this._list.get_theme_node().get_vertical_padding();
 
-        for (let i = 0; i < Utils.WS.getWS().n_workspaces;
-                i += Utils.WS.getWS().workspace_grid.columns) {
+        for (let i = 0; i < global.screen.n_workspaces;
+                i += global.screen.workspace_grid.columns) {
             let [childMinHeight, childNaturalHeight] =
                 children[i].get_preferred_height(-1);
             children[i].get_preferred_width(childNaturalHeight);
@@ -94,7 +93,7 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
 
     _getPreferredWidth : function (actor, forHeight, alloc) {
         let primary = Main.layoutManager.primaryMonitor,
-            ncols   = Utils.WS.getWS().workspace_grid.columns;
+            ncols   = global.screen.workspace_grid.columns;
         this._childWidth = this._childHeight * primary.width / primary.height;
         let width   = this._childWidth * ncols + this._itemSpacing * (ncols - 1),
             padding = this.actor.get_theme_node().get_horizontal_padding() +
@@ -122,10 +121,10 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
             prevX    = x,
             prevY    = y,
             i        = 0;
-        for (let row = 0; row < Utils.WS.getWS().workspace_grid.rows; ++row) {
+        for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
             x     = box.x1;
             prevX = x;
-            for (let col = 0; col < Utils.WS.getWS().workspace_grid.columns; ++col) {
+            for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
                 childBox.x1 = prevX;
                 childBox.x2 = Math.round(x + this._childWidth);
                 childBox.y1 = prevY;
@@ -145,7 +144,7 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
         //log('redisplay, direction ' + this._direction + ', going to ' + this._activeWorkspaceIndex);
         this._list.destroy_all_children();
 
-        for (let i = 0; i < Utils.WS.getWS().n_workspaces; i++) {
+        for (let i = 0; i < global.screen.n_workspaces; i++) {
             let indicator = null;
             let name = Meta.prefs_get_workspace_name(i);
 
@@ -183,7 +182,7 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
         }
 
         let primary = Main.layoutManager.primaryMonitor;
-        let [containerMinHeight, containerNatHeight] = this._container.get_preferred_height(primary.width);
+        let [containerMinHeight, containerNatHeight] = this._container.get_preferred_height(global.screen_width);
         let [containerMinWidth, containerNatWidth] = this._container.get_preferred_width(containerNatHeight);
         this._container.x = primary.x + Math.floor((primary.width - containerNatWidth) / 2);
         this._container.y = primary.y + Main.panel.actor.height +
