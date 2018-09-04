@@ -28,6 +28,11 @@
       <summary>Whether to wrap to the *same* row/col or the next/previous one if wraparound is enabled.</summary>
       <description>If the wraparound setting is enabled, should we wrap to the *same* row/col or the next/previous row/col when we wrap? E.g. if we are trying to navigate right from the top-right-most workspace, do we wrap the the leftmost workspace on the same row, or the leftmost workspace on the next row?</description>
     </key>
+    <key type="b" name="wrap-to-same-scroll">
+      <default>false</default>
+      <summary>Whether to wrap to the *same* row/col or the next/previous on scrolling one if warp-to-same is enabled.</summary>
+      <description>If the warp-to-same setting is enabled, should we wrap to the *same* row/col or the next/previous row/col during scrolling when we wrap? E.g. if we are trying to navigate right from the top-right-most workspace, do we wrap the the leftmost workspace on the same row, or the leftmost workspace on the next row?</description>
+    </key>
     <key type="b" name="show-workspace-labels">
       <default>true</default>
       <summary>Whether to show workspace names in the workspace switcher popup</summary>
@@ -44,6 +49,11 @@
       <range min="0" max="1.0"/>
       <summary>Maximum fraction of the screen workspace thumbnails may take up before collapsing in the overview.</summary>
       <description>Maximum (horizontal) fraction of the screen the workspace thumbnails are allowed to take up in the overview before the workspace thumbnail box intialised collapsed (hover to open).</description>
+    </key>
+    <key type="s" name="scroll-direction">
+      <default>"horizontal"</default>
+      <summary>The direction that scroll event follows</summary>
+      <description>The direction that scroll event follows.</description>
     </key>
 
   </schema>

@@ -41,10 +41,12 @@ var KEY_ROWS = 'num-rows';
 var KEY_COLS = 'num-columns';
 var KEY_WRAPAROUND = 'wraparound';
 var KEY_WRAP_TO_SAME = 'wrap-to-same';
+var KEY_WRAP_TO_SAME_SCROLL = 'wrap-to-same-scroll';
 var KEY_MAX_HFRACTION = 'max-screen-fraction';
 var KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
 var KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
 var KEY_RELATIVE_WORKSPACE_SWITCHING ="relative-workspace-switching";
+var KEY_SCROLL_DIRECTION = 'scroll-direction';
 
 function init() {
     Convenience.initTranslations();
@@ -92,12 +94,23 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this._sameRowCol = this.addBoolean(
             _(" ... and wrap to the same row/col (as opposed to the next/previous)?"),
             KEY_WRAP_TO_SAME);
+        this._sameRowColScroll = this.addBoolean(
+            _("     ... wrap to same also for mouse scrolling?"),
+            KEY_WRAP_TO_SAME_SCROLL);
+        this._sameRowColScroll.set_sensitive(this._sameRowCol.active);
         toggle.connect('notify::active', Lang.bind(this, function(widget) {
             this._sameRowCol.set_sensitive(widget.active);
+        }));
+        this._sameRowCol.connect('notify::active', Lang.bind(this, function(widget) {
+            this._sameRowColScroll.set_sensitive(widget.active);
         }));
 
         this.addBoolean(_("Show workspace labels in the switcher?"),
             KEY_SHOW_WORKSPACE_LABELS);
+
+        this.addTextComboBox("Scroll Direction: ", KEY_SCROLL_DIRECTION,
+            [ { name: "Horizontal", value: "horizontal"},
+              { name: "Vertical", value: "vertical" } ]);
 
         item = new Gtk.Label({
             label: _("The following settings determine how much horizontal " +
@@ -212,6 +225,24 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
             }));
         }
         return this.addRow(text, hscale, true);
+    },
+
+    addTextComboBox: function (text, key, options) {
+      let item = new Gtk.ComboBoxText();
+
+      for (let i = 0; i < options.length; i++ ) {
+        item.append_text(options[i].name);
+        if (options[i].value === this._settings.get_string(key))
+              activeOption = i;
+      }
+      item.set_active(activeOption);
+
+      item.connect('changed', Lang.bind(this, function () {
+        let activeItem = item.get_active();
+        this._settings.set_string(key, options[activeItem].value);
+      }));
+
+      return this.addRow(text, item);
     },
 
     addItem: function (widget, col, colspan, rowspan) {
