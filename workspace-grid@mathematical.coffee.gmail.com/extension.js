@@ -702,7 +702,12 @@ var ThumbnailsBox = new Lang.Class({
         // the size request to our children because we know how big they are and know
         // that the actors aren't depending on the virtual functions being called.
 
-        this._ensurePorthole();
+        if (!this._ensurePorthole()) {
+            alloc.min_size = -1;
+            alloc.natural_size = -1;
+            return;
+        }
+
         let themeNode    = this.actor.get_theme_node();
 
         let spacing      = themeNode.get_length('spacing');
