@@ -9,14 +9,17 @@ clean:
 	rm -f $(UUID).zip $(UUID)/schemas/gschemas.compiled
 
 # compile the schemas
-all:
+schemas:
 	@if [ -d $(UUID)/schemas ]; then \
 		glib-compile-schemas $(UUID)/schemas; \
 	fi
 
-zip: all
+zip: schemas
 	zip -rq $(UUID).zip $(FILES:%=$(UUID)/%)
 
-dev-zip: all
+dev-zip: schemas
 	(cd $(UUID); \
 		zip -rq ../$(UUID).zip $(FILES))
+
+install: schemas
+	yes | \cp -r $(UUID) ~/.local/share/gnome-shell/extensions/
