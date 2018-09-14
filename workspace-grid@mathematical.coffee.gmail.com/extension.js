@@ -506,7 +506,7 @@ function _getWorkspaceDisplay() {
 /******************
  * Overrides the workspaces display in the overview
  ******************/
-const ThumbnailsBox = new Lang.Class({
+var ThumbnailsBox = new Lang.Class({
     Name: 'ThumbnailsBox',
     Extends: WorkspaceThumbnail.ThumbnailsBox,
 
