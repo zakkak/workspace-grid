@@ -1,5 +1,5 @@
 /***********************************************************************
- * Copyright (C)      2015 Foivos S. Zakkak <foivos@zakkak.net         *
+ * Copyright (C) 2015-2018 Foivos S. Zakkak <foivos@zakkak.net>        *
  * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>    *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
@@ -56,16 +56,13 @@ function LOG(msg) {
     //log(msg);
 }
 
-const WorkspaceGridPrefsWidget = new GObject.Class({
-    Name: 'WorkspaceGrid.Prefs.Widget',
-    GTypeName: 'WorkspaceGridPrefsWidget',
-    Extends: Gtk.Grid,
-
-    _init: function (params) {
-        this.parent(params);
+const WorkspaceGridPrefsWidget = GObject.registerClass(
+class WorkspaceGridPrefsWidget extends Gtk.Grid {
+    _init(params) {
+        super._init(params);
         this.margin = this.row_spacing = this.column_spacing = 10;
         this._rownum = 0;
-        this._settings = Convenience.getSettings();
+        this._settings = Convenience.getSettings('org.gnome.shell.extensions.workspace-grid');
         // we use this to throttle the number of 'value-changed' signals that
         // are re-transmitted as settings changes, because when the user uses
         // a Gtk.Scale I get a signal for every single change of value including
@@ -87,7 +84,7 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this.addSpin(_("Number of columns of workspaces:"), KEY_COLS, true,
             1, 36, 1);
 
-		this.addBoolean(_("Relative (to current row) workspace switching?"),
+        this.addBoolean(_("Relative (to current row) workspace switching?"),
             KEY_RELATIVE_WORKSPACE_SWITCHING);
         let toggle = this.addBoolean(_("Wraparound workspaces when navigating?"),
             KEY_WRAPAROUND);
@@ -124,15 +121,15 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
                 0, 1, 0.05);
         this.addScale(_("Maximum width (fraction) before collapse:"),
                 KEY_MAX_HFRACTION_COLLAPSE, false, 0, 1, 0.05);
-    },
+    }
 
-    addBoolean: function (text, key) {
+    addBoolean(text, key) {
         let item = new Gtk.Switch({active: this._settings.get_boolean(key)});
         this._settings.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
         return this.addRow(text, item);
-    },
+    }
 
-    addRow: function (text, widget, wrap) {
+    addRow(text, widget, wrap) {
         let label = new Gtk.Label({
             label: text,
             hexpand: true,
@@ -143,9 +140,9 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this.attach(widget, 1, this._rownum, 1, 1);
         this._rownum++;
         return widget;
-    },
+    }
 
-    addSpin: function (text, key, is_int, lower, upper, increment) {
+    addSpin(text, key, is_int, lower, upper, increment) {
         /* Length cutoff item */
         let adjustment = new Gtk.Adjustment({
             lower: lower,
@@ -176,9 +173,9 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
             }));
         }
         return this.addRow(text, spinButton);
-    },
+    }
 
-    addScale: function (text, key, is_int, lower, upper, increment) {
+    addScale(text, key, is_int, lower, upper, increment) {
         let hscale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,
                 lower, upper, increment);
         hscale.set_digits(is_int ? 0 : 2);
@@ -225,9 +222,9 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
             }));
         }
         return this.addRow(text, hscale, true);
-    },
+    }
 
-    addTextComboBox: function (text, key, options) {
+    addTextComboBox(text, key, options) {
       let item = new Gtk.ComboBoxText();
 
       for (let i = 0; i < options.length; i++ ) {
@@ -243,9 +240,9 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
       }));
 
       return this.addRow(text, item);
-    },
+    }
 
-    addItem: function (widget, col, colspan, rowspan) {
+    addItem(widget, col, colspan, rowspan) {
         this.attach(widget, col || 0, this._rownum, colspan || 2, rowspan || 1);
         this._rownum++;
     }
