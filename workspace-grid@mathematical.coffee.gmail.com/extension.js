@@ -1,5 +1,5 @@
 /***********************************************************************
- * Copyright (C)      2015 Foivos S. Zakkak <foivos@zakkak.net>        *
+ * Copyright (C) 2015-2018 Foivos S. Zakkak <foivos@zakkak.net>        *
  * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>    *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
@@ -149,7 +149,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const Prefs = Me.imports.prefs;
-const MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
+const GridWorkspaceSwitcherPopup = Me.imports.gridWorkspaceSwitcherPopup;
 
 const KEY_ROWS = Prefs.KEY_ROWS;
 const KEY_COLS = Prefs.KEY_COLS;
@@ -244,7 +244,7 @@ function getWorkspaceSwitcherPopup() {
     if (Main.wm._workspaceSwitcherPopup == null) {
         Main.wm._workspaceTracker.blockUpdates();
         Main.wm._workspaceSwitcherPopup =
-            new MyWorkspaceSwitcherPopup.myWorkspaceSwitcherPopup(settings);
+            new GridWorkspaceSwitcherPopup.gridWorkspaceSwitcherPopup(settings);
         Main.wm._workspaceSwitcherPopup.connect('destroy', Lang.bind(Main.wm, function() {
             Main.wm._workspaceTracker.unblockUpdates();
             Main.wm._workspaceSwitcherPopup = null;
@@ -1303,8 +1303,8 @@ let signals = [];
 function enable() {
     /// Storage
     nWorkspaces = Meta.prefs_get_num_workspaces();
-
     settings = Convenience.getSettings();
+
 //    makeWorkspacesStatic();
     exportFunctionsAndConstants(); // so other extension authors can use.
     overrideKeybindingsAndPopup();

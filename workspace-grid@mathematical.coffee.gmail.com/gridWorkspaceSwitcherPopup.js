@@ -1,5 +1,5 @@
 /***********************************************************************
- * Copyright (C)      2015 Foivos S. Zakkak <foivos@zakkak.net>        *
+ * Copyright (C) 2015-2018 Foivos S. Zakkak <foivos@zakkak.net>        *
  * Copyright (C) 2012-2014 Amy Chan <mathematical.coffee@gmail.com>    *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
@@ -37,18 +37,16 @@ var RIGHT = Meta.MotionDirection.RIGHT;
 /************
  * Workspace Switcher that can do rows and columns as opposed to just rows.
  ************/
-var myWorkspaceSwitcherPopup = new Lang.Class({
-    Name: 'myWorkspaceSwitcherPopup',
-    Extends: WorkspaceSwitcherPopup.WorkspaceSwitcherPopup,
+class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitcherPopup {
 
-    _init : function (settings) {
-        this._settings = settings;
-        this.parent();
-    },
+    _init(settings) {
+        this.settings = settings;
+        super._init();
+    }
 
     // note: this makes sure everything fits vertically and then adjust the
     // horizontal to fit.
-    _getPreferredHeight : function (actor, forWidth, alloc) {
+    _getPreferredHeight(actor, forWidth, alloc) {
         let children    = this._list.get_children(),
             primary     = Main.layoutManager.primaryMonitor,
             nrows       = global.screen.workspace_grid.rows,
@@ -89,9 +87,9 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
 
         alloc.min_size     = height;
         alloc.natural_size = height;
-    },
+    }
 
-    _getPreferredWidth : function (actor, forHeight, alloc) {
+    _getPreferredWidth(actor, forHeight, alloc) {
         let primary = Main.layoutManager.primaryMonitor,
             ncols   = global.screen.workspace_grid.columns;
         this._childWidth = this._childHeight * primary.width / primary.height;
@@ -111,9 +109,9 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
 
         alloc.min_size     = width;
         alloc.natural_size = width;
-    },
+    }
 
-    _allocate : function (actor, box, flags) {
+    _allocate(actor, box, flags) {
         let children = this._list.get_children(),
             childBox = new Clutter.ActorBox(),
             x        = box.x1,
@@ -138,9 +136,9 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
             prevY = childBox.y2 + this._itemSpacing;
             y += this._childHeight + this._itemSpacing;
         }
-    },
+    }
 
-    _redisplay: function () {
+    _redisplay() {
         //log('redisplay, direction ' + this._direction + ', going to ' + this._activeWorkspaceIndex);
         this._list.destroy_all_children();
 
@@ -171,7 +169,7 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
             } else {
                 indicator = new St.Bin({style_class: 'ws-switcher-box'});
             }
-            if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_LABELS)) {
+            if (this.settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_LABELS)) {
                 indicator.child = new St.Label({
                     text: name,
                     style_class: 'ws-switcher-label'
@@ -189,4 +187,4 @@ var myWorkspaceSwitcherPopup = new Lang.Class({
                             Math.floor(((primary.height - Main.panel.actor.height) - containerNatHeight) / 2);
     }
 
-});
+}
