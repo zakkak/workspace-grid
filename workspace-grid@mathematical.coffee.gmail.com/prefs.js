@@ -207,6 +207,7 @@ class WorkspaceGridPrefsWidget extends Gtk.Grid {
 
     addTextComboBox(text, key, options) {
       let item = new Gtk.ComboBoxText();
+      let activeOption = 0;
 
       for (let i = 0; i < options.length; i++ ) {
         item.append_text(options[i].name);
