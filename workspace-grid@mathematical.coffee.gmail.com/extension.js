@@ -957,6 +957,8 @@ function _replaceThumbnailsBoxActor (actorCallbackObject) {
 
     // kill the old actor
     slider.actor.remove_actor(thumbnailsBox.actor);
+    thumbnailsBox.actor.remove_actor(thumbnailsBox._indicator);
+    thumbnailsBox.actor.remove_actor(thumbnailsBox._dropPlaceholder);
     thumbnailsBox.actor.destroy();
 
     // make our own actor and slot it in to the existing thumbnailsBox.actor
