@@ -506,15 +506,13 @@ function _getWorkspaceDisplay() {
 /******************
  * Overrides the workspaces display in the overview
  ******************/
-var ThumbnailsBox = new Lang.Class({
-    Name: 'ThumbnailsBox',
-    Extends: WorkspaceThumbnail.ThumbnailsBox,
+class ThumbnailsBox extends WorkspaceThumbnail.ThumbnailsBox {
 
     /**
      * The following are overridden simply to incorporate ._indicatorX in the
      * same way as ._indicatorY
      **/
-    _init: function () {
+    _init() {
         // Note: we could just call this.parent(); this._inicatorX = 0; but
         // instead we replicate this.parent()'s code here so we can store
         // the signal IDs (it connects to Main.overview) so that we can delete
@@ -587,11 +585,11 @@ var ThumbnailsBox = new Lang.Class({
 
         // @@ added
         this._indicatorX = 0; // to match indicatorY
-    },
+    }
 
     /* when the user clicks on a thumbnail take into account the x position
      * of that thumbnail as well as the y to determine which was clicked */
-    _onButtonRelease: function (actor, event) {
+    _onButtonRelease(actor, event) {
         let [stageX, stageY] = event.get_coords();
         let [r, x, y] = this.actor.transform_stage_point(stageX, stageY);
 
@@ -607,10 +605,10 @@ var ThumbnailsBox = new Lang.Class({
         }
 
         return true;
-    },
+    }
 
     /* with drag and drop: modify to look at the x direction as well as the y */
-    handleDragOver: function (source, actor, x, y, time) {
+    handleDragOver(source, actor, x, y, time) {
         if (!source.realWindow && !source.shellWorkspaceLaunch && source != Main.xdndHandler)
             return DND.DragMotionResult.CONTINUE;
 
@@ -648,7 +646,7 @@ var ThumbnailsBox = new Lang.Class({
                     source, time);
         else
             return DND.DragMotionResult.CONTINUE;
-    },
+    }
 
     /* stuff to do with the indicator around the current workspace */
     set indicatorX(indicatorX) {
@@ -656,16 +654,15 @@ var ThumbnailsBox = new Lang.Class({
         //this.actor.queue_relayout(); // <-- we only ever change indicatorX
         // when we change indicatorY and that already causes a queue_relayout
         // so we omit it here so as not to have double the relayout requests..
-    },
+    }
 
     get indicatorX() {
         return this._indicatorX;
-    },
+    }
 
-    _activeWorkspaceChanged: function () {
+    _activeWorkspaceChanged() {
         let thumbnail;
         let activeWorkspace = global.screen.get_active_workspace();
-        log("thumbs length = " + this._thumbnails.length);
         for (let i = 0; i < this._thumbnails.length; i++) {
             if (this._thumbnails[i].metaWorkspace === activeWorkspace) {
                 thumbnail = this._thumbnails[i];
@@ -685,9 +682,9 @@ var ThumbnailsBox = new Lang.Class({
                             },
                            onCompleteScope: this
                          });
-    },
+    }
 
-    _getPreferredHeight: function(actor, forWidth, alloc) {
+    _getPreferredHeight(actor, forWidth, alloc) {
         // Note that for getPreferredWidth/Height we cheat a bit and skip propagating
         // the size request to our children because we know how big they are and know
         // that the actors aren't depending on the virtual functions being called.
@@ -707,7 +704,7 @@ var ThumbnailsBox = new Lang.Class({
         alloc.min_size     = totalSpacing;
         alloc.natural_size = totalSpacing + nWorkspaces *
             this._porthole.height * MAX_THUMBNAIL_SCALE;
-    },
+    }
 
     /**
      * The following are to get things to layout in a grid
@@ -716,7 +713,7 @@ var ThumbnailsBox = new Lang.Class({
      * If it is wider than MAX_SCREEN_HFRACTION_COLLAPSE then we initially
      * start the thumbnails box collapsed.
      **/
-    _getPreferredWidth: function (actor, forHeight, alloc) {
+    _getPreferredWidth(actor, forHeight, alloc) {
         if (this._thumbnails.length === 0) {
             return;
         }
@@ -748,9 +745,9 @@ var ThumbnailsBox = new Lang.Class({
         // natural width is nCols of workspaces + (nCols-1)*spacingX
         [alloc.min_size, alloc.natural_size] =
             themeNode.adjust_preferred_width(width, width);
-    },
+    }
 
-    _allocate: function (actor, box, flags) {
+    _allocate(actor, box, flags) {
         let rtl = (Clutter.get_default_text_direction () == Clutter.TextDirection.RTL);
 
         // See comment about this._background in _init()
@@ -921,9 +918,9 @@ var ThumbnailsBox = new Lang.Class({
                     this._dropPlaceholder.show();
                 }));
         }
-    },
+    }
 
-    destroy: function () {
+    destroy() {
         this.actor.destroy();
         let i = this._signals.length;
         while (i--) {
@@ -932,7 +929,7 @@ var ThumbnailsBox = new Lang.Class({
         this._signals = [];
         this._settings.disconnect(this._dynamicWorkspacesId);
     }
-});
+}
 
 /* Get the thumbnails box to acknowledge a change in allowable width */
 function refreshThumbnailsBox() {
