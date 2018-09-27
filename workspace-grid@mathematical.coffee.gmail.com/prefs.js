@@ -117,10 +117,10 @@ class WorkspaceGridPrefsWidget extends Gtk.Grid {
         item.set_line_wrap(true);
         this.addItem(item, 0, 2, 1);
 
-        this.addScale(_("Maximum width (fraction):"), KEY_MAX_HFRACTION, false,
+        this.addScale(_("Maximum width (fraction):"), KEY_MAX_HFRACTION,
                 0, 1, 0.05);
         this.addScale(_("Maximum width (fraction) before collapse:"),
-                KEY_MAX_HFRACTION_COLLAPSE, false, 0, 1, 0.05);
+                KEY_MAX_HFRACTION_COLLAPSE, 0, 1, 0.05);
     }
 
     addBoolean(text, key) {
@@ -175,10 +175,10 @@ class WorkspaceGridPrefsWidget extends Gtk.Grid {
         return this.addRow(text, spinButton);
     }
 
-    addScale(text, key, is_int, lower, upper, increment) {
+    addScale(text, key, lower, upper, increment) {
         let hscale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,
                 lower, upper, increment);
-        hscale.set_digits(is_int ? 0 : 2);
+        hscale.set_digits(2);
         hscale.set_hexpand(true);
         this._throttlers[key] = 0;
 
@@ -186,41 +186,22 @@ class WorkspaceGridPrefsWidget extends Gtk.Grid {
         // if there are a string of them, e.g. for all the intermediate
         // values between drag-start and drag-end of the slider.
         const SCALE_THROTTLE_TIMEOUT = 500;
-        if (is_int) {
-            hscale.set_value(this._settings.get_int(key));
-            hscale.connect('value-changed', Lang.bind(this, function () {
-                if (this._throttlers[key]) {
-                    Mainloop.source_remove(this._throttlers[key]);
-                }
-                this._throttlers[key] = Mainloop.timeout_add(
-                    SCALE_THROTTLE_TIMEOUT, Lang.bind(this, function () {
-                        let value = hscale.get_value();
-                        if (this._settings.get_int(key) !== value) {
-                            this._settings.set_int(key, value);
-                        }
-                        this._throttlers[key] = 0;
-                        return false;
-                    })
-                );
-            }));
-        } else {
-            hscale.set_value(this._settings.get_double(key));
-            hscale.connect('value-changed', Lang.bind(this, function () {
-                if (this._throttlers[key]) {
-                    Mainloop.source_remove(this._throttlers[key]);
-                }
-                this._throttlers[key] = Mainloop.timeout_add(
-                    SCALE_THROTTLE_TIMEOUT, Lang.bind(this, function () {
-                        let value = hscale.get_value();
-                        if (this._settings.get_double(key) !== value) {
-                            this._settings.set_double(key, value);
-                        }
-                        this._throttlers[key] = 0;
-                        return false;
-                    })
-                );
-            }));
-        }
+        hscale.set_value(this._settings.get_double(key));
+        hscale.connect('value-changed', Lang.bind(this, function () {
+            if (this._throttlers[key]) {
+                Mainloop.source_remove(this._throttlers[key]);
+            }
+            this._throttlers[key] = Mainloop.timeout_add(
+                SCALE_THROTTLE_TIMEOUT, Lang.bind(this, function () {
+                    let value = hscale.get_value();
+                    if (this._settings.get_double(key) !== value) {
+                        this._settings.set_double(key, value);
+                    }
+                    this._throttlers[key] = 0;
+                    return false;
+                })
+            );
+        }));
         return this.addRow(text, hscale, true);
     }
 
