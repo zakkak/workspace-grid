@@ -1003,6 +1003,8 @@ function _replaceThumbnailsBoxActor (actorCallbackObject) {
 
     // kill the old actor
     slider.actor.remove_actor(thumbnailsBox.actor);
+    thumbnailsBox.actor.remove_actor(thumbnailsBox._indicator);
+    thumbnailsBox.actor.remove_actor(thumbnailsBox._dropPlaceholder);
     thumbnailsBox.actor.destroy();
 
     // make our own actor and slot it in to the existing thumbnailsBox.actor
@@ -1213,7 +1215,9 @@ function disableDynamicWorkspaces() {
     } else {
         settings = global.get_overrides_settings()
     }
-    settings.set_boolean('dynamic-workspaces', false);
+    if (settings) {
+        settings.set_boolean('dynamic-workspaces', false);
+    }
 }
 
 /******************
