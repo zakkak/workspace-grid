@@ -1,7 +1,8 @@
 language: node_js
 node_js:
-- "6"
+  - "6"
 
 script:
-- npm install eslint
-- ./node_modules/.bin/eslint workspace-grid@mathematical.coffee.gmail.com/*.js
+  - npm install eslint prettier
+  - ./node_modules/.bin/eslint workspace-grid@mathematical.coffee.gmail.com/*.js
+  - ./node_modules/.bin/prettier -l .travis.yml
