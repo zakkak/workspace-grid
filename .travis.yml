@@ -1,0 +1,7 @@
+language: node_js
+node_js:
+- "6"
+
+script:
+- npm install eslint
+- ./node_modules/.bin/eslint workspace-grid@mathematical.coffee.gmail.com/*.js
