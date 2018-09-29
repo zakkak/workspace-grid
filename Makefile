@@ -23,3 +23,4 @@ dev-zip: schemas
 
 install: schemas
 	yes | \cp -r $(UUID) ~/.local/share/gnome-shell/extensions/
+	gnome-shell-extension-tool -r workspace-grid@mathematical.coffee.gmail.com
