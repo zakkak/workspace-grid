@@ -6,3 +6,18 @@ script:
   - npm install eslint prettier
   - ./node_modules/.bin/eslint workspace-grid@mathematical.coffee.gmail.com/*.js
   - ./node_modules/.bin/prettier -l .travis.yml Readme.md
+  - make dev-zip
+before_deploy:
+  # Set up git user name and tag this commit
+  - git config --local user.name "Foivos Zakkak"
+  - git config --local user.email "foivos@zakkak.net"
+  - git tag "workspace-grid-for-$TRAVIS_BRANCH-b$TRAVIS_BUILD_NUMBER"
+deploy:
+  skip_cleanup: true
+  provider: releases
+  api_key:
+    secure: QsE+q7sECWsR4vriXItgNBsojQnUe2UtX3GmgauqgPkx1HZNjsXrWlIJvr7BZhhosOT4rv4hDxFlaEH1iSNQ/NSnpcvkrWi8AF0ORmeROU8KRi6+bEJSUnNk5x+E+jb/c7LFzs4HU8uiXu6jDklj8GADsMERKGcbhV0VrjmHxPo=
+  file: workspace-grid@mathematical.coffee.gmail.com.zip
+  on:
+    repo: zakkak/workspace-grid
+    branch: "3.28"
