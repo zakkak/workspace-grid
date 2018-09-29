@@ -5,5 +5,4 @@ node_js:
 script:
   - npm install eslint prettier
   - ./node_modules/.bin/eslint workspace-grid@mathematical.coffee.gmail.com/*.js
-  - ./node_modules/.bin/prettier -l .travis.yml
-  - ./node_modules/.bin/prettier -l Readme.md
+  - ./node_modules/.bin/prettier -l .travis.yml Readme.md
