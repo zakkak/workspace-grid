@@ -152,18 +152,21 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const Prefs = Me.imports.prefs;
+const PrefKeys = Me.imports.prefKeys;
 const GridWorkspaceSwitcherPopup = Me.imports.gridWorkspaceSwitcherPopup;
 const Utils = Me.imports.utils;
 
-const KEY_ROWS = Prefs.KEY_ROWS;
-const KEY_COLS = Prefs.KEY_COLS;
-const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
-const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
-const KEY_WRAP_TO_SAME_SCROLL = Prefs.KEY_WRAP_TO_SAME_SCROLL;
-const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
-const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
-const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
-const KEY_SCROLL_DIRECTION = Prefs.KEY_SCROLL_DIRECTION;
+const KEY_ROWS = PrefKeys.KEY_ROWS;
+const KEY_COLS = PrefKeys.KEY_COLS;
+const KEY_WRAPAROUND = PrefKeys.KEY_WRAPAROUND;
+const KEY_WRAP_TO_SAME = PrefKeys.KEY_WRAP_TO_SAME;
+const KEY_WRAP_TO_SAME_SCROLL = PrefKeys.KEY_WRAP_TO_SAME_SCROLL;
+const KEY_MAX_HFRACTION = PrefKeys.KEY_MAX_HFRACTION;
+const KEY_MAX_HFRACTION_COLLAPSE = PrefKeys.KEY_MAX_HFRACTION_COLLAPSE;
+const KEY_SHOW_WORKSPACE_LABELS = PrefKeys.KEY_SHOW_WORKSPACE_LABELS;
+const KEY_RELATIVE_WORKSPACE_SWITCHING =
+    PrefKeys.KEY_RELATIVE_WORKSPACE_SWITCHING;
+const KEY_SCROLL_DIRECTION = PrefKeys.KEY_SCROLL_DIRECTION;
 
 const OVERRIDE_SCHEMA = "org.gnome.shell.overrides";
 
@@ -452,7 +455,7 @@ function showWorkspaceSwitcher(display, arg2, arg3, arg4) {
         direction = Meta.MotionDirection[target.toUpperCase()];
     } else if (target > 0) {
         target--;
-        if (settings.get_boolean(Prefs.KEY_RELATIVE_WORKSPACE_SWITCHING)) {
+        if (settings.get_boolean(KEY_RELATIVE_WORKSPACE_SWITCHING)) {
             target =
                 target +
                 Math.floor(
