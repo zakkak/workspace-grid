@@ -25,7 +25,7 @@ const Clutter = imports.gi.Clutter;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me             = ExtensionUtils.getCurrentExtension();
-const Prefs          = Me.imports.prefs;
+const PrefKeys       = Me.imports.prefkeys;
 
 const WorkspaceSwitcherPopup = imports.ui.workspaceSwitcherPopup;
 
@@ -171,7 +171,7 @@ const myWorkspaceSwitcherPopup = new Lang.Class({
             } else {
                 indicator = new St.Bin({style_class: 'ws-switcher-box'});
             }
-            if (this._settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_LABELS)) {
+            if (this._settings.get_boolean(PrefKeys.SHOW_WORKSPACE_LABELS)) {
                 indicator.child = new St.Label({
                     text: name,
                     style_class: 'ws-switcher-label'

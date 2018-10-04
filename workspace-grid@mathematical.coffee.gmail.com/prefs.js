@@ -36,15 +36,7 @@ const _ = Gettext.gettext;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
-
-const KEY_ROWS = 'num-rows';
-const KEY_COLS = 'num-columns';
-const KEY_WRAPAROUND = 'wraparound';
-const KEY_WRAP_TO_SAME = 'wrap-to-same';
-const KEY_MAX_HFRACTION = 'max-screen-fraction';
-const KEY_MAX_HFRACTION_COLLAPSE = 'max-screen-fraction-before-collapse';
-const KEY_SHOW_WORKSPACE_LABELS = 'show-workspace-labels';
-const KEY_RELATIVE_WORKSPACE_SWITCHING ="relative-workspace-switching";
+const PrefKeys = Me.imports.prefkeys;
 
 function init() {
     Convenience.initTranslations();
@@ -79,25 +71,25 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         this.addItem(item, 0, 2, 1);
 
 
-        this.addSpin(_("Number of rows of workspaces:"), KEY_ROWS, true,
+        this.addSpin(_("Number of rows of workspaces:"), PrefKeys.ROWS, true,
             1, 36, 1);
 
-        this.addSpin(_("Number of columns of workspaces:"), KEY_COLS, true,
+        this.addSpin(_("Number of columns of workspaces:"), PrefKeys.COLS, true,
             1, 36, 1);
 
 		this.addBoolean(_("Relative (to current row) workspace switching?"),
-            KEY_RELATIVE_WORKSPACE_SWITCHING);
+            PrefKeys.RELATIVE_WORKSPACE_SWITCHING);
         let toggle = this.addBoolean(_("Wraparound workspaces when navigating?"),
-            KEY_WRAPAROUND);
+            PrefKeys.WRAPAROUND);
         this._sameRowCol = this.addBoolean(
             _(" ... and wrap to the same row/col (as opposed to the next/previous)?"),
-            KEY_WRAP_TO_SAME);
+            PrefKeys.WRAP_TO_SAME);
         toggle.connect('notify::active', Lang.bind(this, function(widget) {
             this._sameRowCol.set_sensitive(widget.active);
         }));
 
         this.addBoolean(_("Show workspace labels in the switcher?"),
-            KEY_SHOW_WORKSPACE_LABELS);
+            PrefKeys.SHOW_WORKSPACE_LABELS);
 
         item = new Gtk.Label({
             label: _("The following settings determine how much horizontal " +
@@ -107,10 +99,10 @@ const WorkspaceGridPrefsWidget = new GObject.Class({
         item.set_line_wrap(true);
         this.addItem(item, 0, 2, 1);
 
-        this.addScale(_("Maximum width (fraction):"), KEY_MAX_HFRACTION, false,
+        this.addScale(_("Maximum width (fraction):"), PrefKeys.MAX_HFRACTION, false,
                 0, 1, 0.05);
         this.addScale(_("Maximum width (fraction) before collapse:"),
-                KEY_MAX_HFRACTION_COLLAPSE, false, 0, 1, 0.05);
+                PrefKeys.MAX_HFRACTION_COLLAPSE, false, 0, 1, 0.05);
     },
 
     addBoolean: function (text, key) {

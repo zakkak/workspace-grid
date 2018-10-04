@@ -148,18 +148,10 @@ const WorkspacesView = imports.ui.workspacesView;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
-const Prefs = Me.imports.prefs;
+const PrefKeys = Me.imports.prefkeys;
 const MyWorkspaceSwitcherPopup = Me.imports.myWorkspaceSwitcherPopup;
 
-const KEY_ROWS = Prefs.KEY_ROWS;
-const KEY_COLS = Prefs.KEY_COLS;
-const KEY_WRAPAROUND = Prefs.KEY_WRAPAROUND;
-const KEY_WRAP_TO_SAME = Prefs.KEY_WRAP_TO_SAME;
-const KEY_MAX_HFRACTION = Prefs.KEY_MAX_HFRACTION;
-const KEY_MAX_HFRACTION_COLLAPSE = Prefs.KEY_MAX_HFRACTION_COLLAPSE;
-const KEY_SHOW_WORKSPACE_LABELS = Prefs.KEY_SHOW_WORKSPACE_LABELS;
-
-const OVERRIDE_SCHEMA = 'org.gnome.shell.overrides'
+const OVERRIDE_SCHEMA = 'org.gnome.shell.overrides';
 
 // laziness
 const UP = Meta.MotionDirection.UP;
@@ -189,7 +181,7 @@ const genBindings = function(prefix, count) {
         bindings.push(prefix + i);
     }
     return bindings;
-}
+};
 const SwitchBindings = genBindings('switch-to-workspace-', MAX_WORKSPACES);
 const MoveBindings = genBindings('move-to-workspace-', MAX_WORKSPACES);
 
@@ -356,7 +348,7 @@ function showWorkspaceSwitcher(display, screen, window, binding) {
         direction = Meta.MotionDirection[target.toUpperCase()];
     } else if (target > 0) {
         target--;
-		if (settings.get_boolean(Prefs.KEY_RELATIVE_WORKSPACE_SWITCHING)) {
+		if (settings.get_boolean(PrefKeys.RELATIVE_WORKSPACE_SWITCHING)) {
 			target = target + Math.floor(screen.get_active_workspace_index() / global.screen.workspace_grid.columns ) * global.screen.workspace_grid.columns ;
 		}
         newWs = screen.get_workspace_by_index(target);
@@ -393,8 +385,8 @@ function actionMoveWorkspace(destination) {
         to = destination;
     else
         to = calculateWorkspace(destination,
-                                settings.get_boolean(KEY_WRAPAROUND),
-                                settings.get_boolean(KEY_WRAP_TO_SAME));
+                                settings.get_boolean(PrefKeys.WRAPAROUND),
+                                settings.get_boolean(PrefKeys.WRAP_TO_SAME));
 
     let ws = global.screen.get_workspace_by_index(to);
 
@@ -411,8 +403,8 @@ function actionMoveWindow(window, destination) {
         to = destination;
     else
         to = calculateWorkspace(destination,
-                                settings.get_boolean(KEY_WRAPAROUND),
-                                settings.get_boolean(KEY_WRAP_TO_SAME));
+                                settings.get_boolean(PrefKeys.WRAPAROUND),
+                                settings.get_boolean(PrefKeys.WRAP_TO_SAME));
 
     let ws = global.screen.get_workspace_by_index(to);
 
@@ -708,7 +700,7 @@ const ThumbnailsBox = new Lang.Class({
 
         let width = totalSpacingX + nCols * this._porthole.width * scale,
             maxWidth = (Main.layoutManager.primaryMonitor.width *
-                            settings.get_double(KEY_MAX_HFRACTION)) -
+                            settings.get_double(PrefKeys.MAX_HFRACTION)) -
                        this.actor.get_theme_node().get_horizontal_padding() -
                        themeNode.get_horizontal_padding();
         // store the horizontal scale for use in _allocate.
@@ -1058,7 +1050,7 @@ function overrideWorkspaceDisplay() {
         if (!alwaysZoomOut && Main.overview._controls._thumbnailsBox.actor.mapped) {
             alwaysZoomOut = Main.overview._controls._thumbnailsBox.actor.width <=
                             (Main.layoutManager.primaryMonitor.width *
-                             settings.get_double(KEY_MAX_HFRACTION_COLLAPSE));
+                             settings.get_double(PrefKeys.MAX_HFRACTION_COLLAPSE));
         }
 
         return alwaysZoomOut;
@@ -1194,8 +1186,8 @@ function unmodifyNumWorkspaces() {
  ******************/
 function exportFunctionsAndConstants() {
     global.screen.workspace_grid = {
-        rows: settings.get_int(KEY_ROWS),
-        columns: settings.get_int(KEY_COLS),
+        rows: settings.get_int(PrefKeys.ROWS),
+        columns: settings.get_int(PrefKeys.COLS),
 
         rowColToIndex: rowColToIndex,
         indexToRowCol: indexToRowCol,
@@ -1207,7 +1199,7 @@ function exportFunctionsAndConstants() {
     };
 
     // It seems you can only have 36 workspaces max.
-    if (settings.get_int(KEY_ROWS) * settings.get_int(KEY_COLS) >
+    if (settings.get_int(PrefKeys.ROWS) * settings.get_int(PrefKeys.COLS) >
             MAX_WORKSPACES) {
         log("WARNING [workspace-grid]: You can have at most 36 workspaces, " +
                 "will ignore the rest");
@@ -1252,10 +1244,10 @@ function enable() {
     Mainloop.idle_add(modifyNumWorkspaces);
 
     // Connect settings change: the only one we have to monitor is cols/rows
-    signals.push(settings.connect('changed::' + KEY_ROWS, nWorkspacesChanged));
-    signals.push(settings.connect('changed::' + KEY_COLS, nWorkspacesChanged));
-    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION, refreshThumbnailsBox));
-    signals.push(settings.connect('changed::' + KEY_MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
+    signals.push(settings.connect('changed::' + PrefKeys.ROWS, nWorkspacesChanged));
+    signals.push(settings.connect('changed::' + PrefKeys.COLS, nWorkspacesChanged));
+    signals.push(settings.connect('changed::' + PrefKeys.MAX_HFRACTION, refreshThumbnailsBox));
+    signals.push(settings.connect('changed::' + PrefKeys.MAX_HFRACTION_COLLAPSE, refreshThumbnailsBox));
 }
 
 function disable() {
