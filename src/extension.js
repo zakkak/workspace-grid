@@ -16,122 +16,6 @@
  * along with this program.  If not, see                               *
  * <http://www.gnu.org/licenses/>.                                     *
  ***********************************************************************/
-
-/* Workspaces Grid GNOME shell extension.
- *
- * mathematical.coffee <mathematical.coffee@gmail.com>
- *
- * Inspired by Frippery Static Workspaces[0] by R. M. Yorston
- *
- * [0]: https://extensions.gnome.org/extension/12/static-workspaces/
- *
- * ----------------------------------------------------
- * Notes for other developers
- * --------------------------
- * If you wish to see if your extension is compatible with this, note:
- *
- * This extension exports a number of constants and functions to an object
- * global.screen.workspace_grid (GNOME <= 3.28) or global.workspace_manager
- * (GNOME > 3.28) for your convenience. Note that this extension must be enabled
- * for this all to work.
- * global.{screen,workspace_manager}.workspace_grid contains:
- *
- *   (Exported Constants)
- *   - rows     : number of rows of workspaces
- *   - columns  : number of columns of workspaces
- *
- *   (Exported Functions)
- *   - moveWorkspace : switches workspaces in the direction specified, being
- *                     either UP, LEFT, RIGHT or DOWN (see Meta.MotionDirection).
- *   - rowColToIndex : converts the row/column into an index for use with (e.g.)
- *                     global.{screen,workspace_manager}.get_workspace_by_index(i)
- *   - indexToRowCol : converts an index (0 to
- *                     global.{screen,workspace_manager}.n_workspaces-1) to a
- *                     row and column
- *   - getWorkspaceSwitcherPopup : gets our workspace switcher popup so you
- *                                 can show it if you want
- *   - calculateWorkspace : returns the workspace index in the specified direction
- *                          to the current, taking into account wrapping.
- *
- * For example, to move to the workspace below us:
- *     const WorkspaceGrid = global.{screen,workspace_manager}.workspace_grid;
- *     WorkspaceGrid.moveWorkspace(Meta.MotionDirection.DOWN);
- *
- * I am happy to try help/give an opinion/improve this extension to try make it
- *  more compatible with yours, email me :)
- *
- * Listening to workspace_grid
- * ---------------------------
- * Say you want to know the number of rows/columns of workspaces in your
- * extension. Then you have to wait for this extension to load and populate
- * global.{screen,workspace_manager}.workspace_grid.
- *
- * When the workspace_grid extension enables or disables it fires a
- *  'notify::n_workspaces' signal on global.{screen,workspace_manager}.
- *
- * You can connect to this and check for the existence (or removal) of
- * global.{screen,workspace_manager}.workspace_grid.
- *
- * Further notes
- * -------------
- * Workspaces can be changed by the user by a number of ways, and this extension
- * aims to cover them all:
- * - keybinding (wm.setCustomKeybindingHandler)
- * - keybinding with global grab in progress (e.g. in Overview/lg): see
- *    Main._globalKeyPressHandler
- * - scrolling in the overview (WorkspacesView.WorkspacesDisplay._onScrollEvent)
- * - clicking in the overview.
- *
- * Dev notes for this extension
- * ----------------------------
- * From GNOME 3.4+ to keep workspaces static we can just do:
- * - org.gnome.shell.overrides.dynamic-workspaces false
- * - org.gnome.desktop.wm.preferences.num-workspaces <numworkspaces>
- * However then you can't drag/drop applications between workspaces (GNOME 3.4
- *  and 3.6 anyway)
- * In 3.8 you can drag/drop between workspaces with dynamic-workspace off, but you
- *  can't drag/drop to create a *new* workspace (or at least you don't get the
- *  animation showing that this is possible).
- *
- * Hence we make use of the Frippery Static Workspace code.
- *
- * See also the edited workspaces indicator
- * http://kubiznak-petr.ic.cz/en/workspace-indicator.php (this is column-major).
- *
- * GNOME 3.2 <-> GNOME 3.4
- * -----------------------
- * - Main.wm.setKeybindingHandler -> Meta.keybindings_set_custom_handler
- * - keybinding names '_' -> '-'
- * - keybinding callback: wm, binding, mask, window, backwards ->
- *    display, screen, window, binding
- * - keybinding callback: binding -> binding.get_name()
- * - destroy_children <-> destroy_all_children
- * - In 3.4 thumbnails box has a dropPlaceholder for dropping windows into new
- *   workspaces
- *
- * GNOME 3.4 <-> GNOME 3.6
- * ---------
- * - WorkspaceSwitcherPopup gets *destroyed* every time it disappears
- * - Main.overview._workspacesDisplay -> Main.overview._viewSelector._workspacesDisplay
- * - The old WorkspaceSwitcherPopup _redraw + _position combined into _redisplay.
- * - Directions instead of being 'switch-to-workspace-*' are now Meta.MotionDirection
- * - The workspace popup also shows for 'move-to-workspace-*' binings.
- * - actionMoveWorkspace{Up,Down} --> actionMoveWorkspace
- *
- * GNOME 3.6 <-> GNOME 3.8
- * ---------
- * - Meta.keybindings_set_custom_handler -> Main.wm.setCustomKeybindingHandler
- *   (we've almost done a full loop back to 3.2...)
- * - use of setCustomKeybindingHandler allows modes (normal/overview) to be
- *    passed in, so it's no longer to override globalKeyPressHandler
- * - calculateWorkspace can use get_neighbor() which is now exposed.
- * - no need to reconstruct workspace controls (I think)
- * - _allocate code changed quite a bit to ensure thumbnails fit horizontally
- *    as the width given to _allocate is now the actual *onscreen* width
- *    (used to be the preferred width I think whether or not that fit on screen).
- */
-
-////////// CODE ///////////
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
@@ -211,11 +95,9 @@ const TBProto = WorkspaceThumbnail.ThumbnailsBox.prototype;
 
 /* storage for the extension */
 let staticWorkspaceStorage = {};
-let wmStorage = {};
 let wvStorage = {};
 let tbStorage = {};
 let nWorkspaces;
-let onScrollId = 0;
 let settings = 0;
 
 /***************

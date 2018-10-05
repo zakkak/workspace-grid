@@ -174,4 +174,21 @@ extension overrides are:
   `'scroll-event'`), and
 - clicking in the overview.
 
----
+## Dev notes for this extension
+
+From GNOME 3.4+ to keep workspaces static we can just do:
+
+- org.gnome.shell.overrides.dynamic-workspaces false
+- org.gnome.desktop.wm.preferences.num-workspaces <numworkspaces>
+
+However then you can't drag/drop applications between workspaces (GNOME 3.4
+and 3.6 anyway)
+
+In 3.8 you can drag/drop between workspaces with dynamic-workspace off, but you
+can't drag/drop to create a _new_ workspace (or at least you don't get the
+animation showing that this is possible).
+
+Hence we make use of the Frippery Static Workspace code.
+
+See also the edited workspaces indicator
+<http://kubiznak-petr.ic.cz/en/workspace-indicator.php> (this is column-major).
