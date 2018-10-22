@@ -1262,7 +1262,9 @@ function disableDynamicWorkspaces() {
     } else {
         settings = global.get_overrides_settings();
     }
-    settings.set_boolean("dynamic-workspaces", false);
+    if (settings) {
+        settings.set_boolean("dynamic-workspaces", false);
+    }
 }
 
 /******************
