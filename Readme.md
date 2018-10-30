@@ -57,9 +57,22 @@ Or
     gnome tweak tool to _static_ and the _Number of Workspaces_ to the
     total number of workspaces you want to have.
 
-## Configuration options:
+## gnome-tweaks-tool (aka **Tweaks**)
+
+    sudo apt install gnome-tweak-tool
+
+Go to `Extension` an click on the gear next to `Workspace grid`.
+
+### Configuration options:
 
 - Number of rows/columns in the workspace.
+- Reative workspace switching.
+
+  When using relative navigation you always stay within current row of desktops.
+
+  e.g.
+  When you have 20 desktops (2 rows) and you're on desktop 15 and press Ctrl+2 (navigate to workspace 2), it actually switches to workspace 12 (opposed to workspace 2 if relative workspace navigation is not enabled).
+  
 - Whether workspaces wrap around.
 
   When navigating workspaces (via keybindings, scrolling over the
@@ -68,13 +81,22 @@ Or
   back to workspace 1)?
 
 - Whether to show workspace labels in the switcher.
+- Scroll direction.
+- Maximum width.
 
-  To assign labels to workspaces use `dconf-editor` and go to
-  `/org/gnome/desktop/wm/preferences/workspace-names`, then change
-  the value to whatever you wish.
+## dconf-editor
+
+    sudo apt install dconf-editor
+
+go to `/org/gnome/desktop/wm/preferences/workspace-names`
+
+### Configuration options:
+  To assign labels to workspaces add/change strings to the `Custom value` array.
 
   e.g.
   ![img](https://cloud.githubusercontent.com/assets/1435395/22392052/262a96de-e4fe-11e6-9dee-58377978693c.png)
+
+## Hints
 
 - Workspaces thumbnails sidebar in overview.
 
@@ -82,13 +104,6 @@ Or
   workspaces. The sidebar can be collapsed to the side of the screen
   if it becomes too wide so that you then hover your mouse over it
   to uncollapse it.
-
-- Whether to use relative navigation (instead of absolute) for workspaces
-
-  When using relative navigation you always stay within current row of desktops.
-
-  e.g.
-  When you have 20 desktops (2 rows) and you're on desktop 15 and press Ctrl+2 (navigate to workspace 2), it actually switches to workspace 12 (opposed to workspace 2 if relative workspace navigation is not enabled).
 
 ---
 
