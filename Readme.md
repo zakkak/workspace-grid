@@ -72,7 +72,7 @@ Go to `Extension` an click on the gear next to `Workspace grid`.
 
   e.g.
   When you have 20 desktops (2 rows) and you're on desktop 15 and press Ctrl+2 (navigate to workspace 2), it actually switches to workspace 12 (opposed to workspace 2 if relative workspace navigation is not enabled).
-  
+
 - Whether workspaces wrap around.
 
   When navigating workspaces (via keybindings, scrolling over the
@@ -91,10 +91,11 @@ Go to `Extension` an click on the gear next to `Workspace grid`.
 go to `/org/gnome/desktop/wm/preferences/workspace-names`
 
 ### Configuration options:
-  To assign labels to workspaces add/change strings to the `Custom value` array.
 
-  e.g.
-  ![img](https://cloud.githubusercontent.com/assets/1435395/22392052/262a96de-e4fe-11e6-9dee-58377978693c.png)
+To assign labels to workspaces add/change strings to the `Custom value` array.
+
+e.g.
+![img](https://cloud.githubusercontent.com/assets/1435395/22392052/262a96de-e4fe-11e6-9dee-58377978693c.png)
 
 ## Hints
 
