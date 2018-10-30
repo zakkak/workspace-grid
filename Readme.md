@@ -1,6 +1,6 @@
 # Workspace Grid GNOME Shell Extension
 
-[![codebeat badge](https://codebeat.co/badges/5574d479-e881-46a4-a884-96a821682bbd)](https://codebeat.co/projects/github-com-zakkak-workspace-grid-3-28) [![Build Status](https://travis-ci.org/zakkak/workspace-grid.svg)](https://travis-ci.org/zakkak/workspace-grid)
+[![codebeat badge](https://codebeat.co/badges/094b19ec-27d6-48ca-abd8-71c9459690a8)](https://codebeat.co/projects/github-com-zakkak-workspace-grid-3-30) [![Build Status](https://travis-ci.org/zakkak/workspace-grid.svg)](https://travis-ci.org/zakkak/workspace-grid)
 
 This extension allows you to configure your workspaces in a grid,
 inspired by the [Frippery Static Workspaces extension](https://extensions.gnome.org/extension/12/static-workspaces/).
@@ -57,9 +57,22 @@ Or
     gnome tweak tool to _static_ and the _Number of Workspaces_ to the
     total number of workspaces you want to have.
 
-## Configuration options:
+## gnome-tweaks-tool (aka **Tweaks**)
+
+    sudo apt install gnome-tweak-tool
+
+Go to `Extension` an click on the gear next to `Workspace grid`.
+
+### Configuration options:
 
 - Number of rows/columns in the workspace.
+- Reative workspace switching.
+
+  When using relative navigation you always stay within current row of desktops.
+
+  e.g.
+  When you have 20 desktops (2 rows) and you're on desktop 15 and press Ctrl+2 (navigate to workspace 2), it actually switches to workspace 12 (opposed to workspace 2 if relative workspace navigation is not enabled).
+  
 - Whether workspaces wrap around.
 
   When navigating workspaces (via keybindings, scrolling over the
@@ -68,13 +81,22 @@ Or
   back to workspace 1)?
 
 - Whether to show workspace labels in the switcher.
+- Scroll direction.
+- Maximum width.
 
-  To assign labels to workspaces use `dconf-editor` and go to
-  `/org/gnome/desktop/wm/preferences/workspace-names`, then change
-  the value to whatever you wish.
+## dconf-editor
+
+    sudo apt install dconf-editor
+
+go to `/org/gnome/desktop/wm/preferences/workspace-names`
+
+### Configuration options:
+  To assign labels to workspaces add/change strings to the `Custom value` array.
 
   e.g.
   ![img](https://cloud.githubusercontent.com/assets/1435395/22392052/262a96de-e4fe-11e6-9dee-58377978693c.png)
+
+## Hints
 
 - Workspaces thumbnails sidebar in overview.
 
@@ -82,13 +104,6 @@ Or
   workspaces. The sidebar can be collapsed to the side of the screen
   if it becomes too wide so that you then hover your mouse over it
   to uncollapse it.
-
-- Whether to use relative navigation (instead of absolute) for workspaces
-
-  When using relative navigation you always stay within current row of desktops.
-
-  e.g.
-  When you have 20 desktops (2 rows) and you're on desktop 15 and press Ctrl+2 (navigate to workspace 2), it actually switches to workspace 12 (opposed to workspace 2 if relative workspace navigation is not enabled).
 
 ---
 
@@ -174,4 +189,21 @@ extension overrides are:
   `'scroll-event'`), and
 - clicking in the overview.
 
----
+## Dev notes for this extension
+
+From GNOME 3.4+ to keep workspaces static we can just do:
+
+- org.gnome.shell.overrides.dynamic-workspaces false
+- org.gnome.desktop.wm.preferences.num-workspaces <numworkspaces>
+
+However then you can't drag/drop applications between workspaces (GNOME 3.4
+and 3.6 anyway)
+
+In 3.8 you can drag/drop between workspaces with dynamic-workspace off, but you
+can't drag/drop to create a _new_ workspace (or at least you don't get the
+animation showing that this is possible).
+
+Hence we make use of the Frippery Static Workspace code.
+
+See also the edited workspaces indicator
+<http://kubiznak-petr.ic.cz/en/workspace-indicator.php> (this is column-major).
