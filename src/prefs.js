@@ -36,17 +36,19 @@ const _ = Gettext.gettext;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
+const PrefKeys = Me.imports.prefKeys;
 
-var KEY_ROWS = "num-rows";
-var KEY_COLS = "num-columns";
-var KEY_WRAPAROUND = "wraparound";
-var KEY_WRAP_TO_SAME = "wrap-to-same";
-var KEY_WRAP_TO_SAME_SCROLL = "wrap-to-same-scroll";
-var KEY_MAX_HFRACTION = "max-screen-fraction";
-var KEY_MAX_HFRACTION_COLLAPSE = "max-screen-fraction-before-collapse";
-var KEY_SHOW_WORKSPACE_LABELS = "show-workspace-labels";
-var KEY_RELATIVE_WORKSPACE_SWITCHING = "relative-workspace-switching";
-var KEY_SCROLL_DIRECTION = "scroll-direction";
+var KEY_ROWS = PrefKeys.KEY_ROWS;
+var KEY_COLS = PrefKeys.KEY_COLS;
+var KEY_WRAPAROUND = PrefKeys.KEY_WRAPAROUND;
+var KEY_WRAP_TO_SAME = PrefKeys.KEY_WRAP_TO_SAME;
+var KEY_WRAP_TO_SAME_SCROLL = PrefKeys.KEY_WRAP_TO_SAME_SCROLL;
+var KEY_MAX_HFRACTION = PrefKeys.KEY_MAX_HFRACTION;
+var KEY_MAX_HFRACTION_COLLAPSE = PrefKeys.KEY_MAX_HFRACTION_COLLAPSE;
+var KEY_SHOW_WORKSPACE_LABELS = PrefKeys.KEY_SHOW_WORKSPACE_LABELS;
+var KEY_RELATIVE_WORKSPACE_SWITCHING =
+    PrefKeys.KEY_RELATIVE_WORKSPACE_SWITCHING;
+var KEY_SCROLL_DIRECTION = PrefKeys.KEY_SCROLL_DIRECTION;
 
 function init() {
     Convenience.initTranslations();

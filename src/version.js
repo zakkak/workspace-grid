@@ -1,5 +1,5 @@
 /***********************************************************************
- * Copyright (C)      2018 Matthieu Baerts <matttbe@gmail.com>         *
+ * Copyright (C)      2018 Foivos Zakkak <foivos@zakkak.net>           *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
  * modify it under the terms of the GNU General Public License as      *
@@ -16,30 +16,12 @@
  * <http://www.gnu.org/licenses/>.                                     *
  ***********************************************************************/
 
-const Meta = imports.gi.Meta;
-const ShellVersion = imports.misc.config.PACKAGE_VERSION;
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const Version = Me.imports.version;
-
-const ShellVersionId = Version.getShellVersionIdFromString(ShellVersion);
-
-function isVersionAbove(major, minor) {
-    return ShellVersionId > Version.getShellVersionId(major, minor);
+function getShellVersionIdFromString(versionString) {
+    let major = parseInt(versionString.split(".")[0]);
+    let minor = parseInt(versionString.split(".")[1]);
+    return getShellVersionId(major, minor);
 }
 
-// Inspired by https://github.com/micheleg/dash-to-dock/commit/8398d41
-// Maintain compatibility with GNOME-Shell 3.30+ as well as previous versions.
-var WS = {
-    getWS: function() {
-        if (isVersionAbove(3, 28)) {
-            return global.workspace_manager;
-        }
-        return global.screen;
-    },
-    getCorner: function() {
-        if (isVersionAbove(3, 28)) {
-            return Meta.DisplayCorner;
-        }
-        return Meta.ScreenCorner;
-    }
-};
+function getShellVersionId(major, minor) {
+    return (major << 8) + minor;
+}

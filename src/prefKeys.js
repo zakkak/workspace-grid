@@ -1,5 +1,6 @@
 /***********************************************************************
- * Copyright (C)      2018 Matthieu Baerts <matttbe@gmail.com>         *
+ * Copyright (C) 2018 Foivos S. Zakkak <foivos@zakkak.net>             *
+ * Copyright 2017 NueveBit, todos los derechos reservados.             *
  *                                                                     *
  * This program is free software: you can redistribute it and/or       *
  * modify it under the terms of the GNU General Public License as      *
@@ -16,30 +17,13 @@
  * <http://www.gnu.org/licenses/>.                                     *
  ***********************************************************************/
 
-const Meta = imports.gi.Meta;
-const ShellVersion = imports.misc.config.PACKAGE_VERSION;
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const Version = Me.imports.version;
-
-const ShellVersionId = Version.getShellVersionIdFromString(ShellVersion);
-
-function isVersionAbove(major, minor) {
-    return ShellVersionId > Version.getShellVersionId(major, minor);
-}
-
-// Inspired by https://github.com/micheleg/dash-to-dock/commit/8398d41
-// Maintain compatibility with GNOME-Shell 3.30+ as well as previous versions.
-var WS = {
-    getWS: function() {
-        if (isVersionAbove(3, 28)) {
-            return global.workspace_manager;
-        }
-        return global.screen;
-    },
-    getCorner: function() {
-        if (isVersionAbove(3, 28)) {
-            return Meta.DisplayCorner;
-        }
-        return Meta.ScreenCorner;
-    }
-};
+const KEY_ROWS = "num-rows";
+const KEY_COLS = "num-columns";
+const KEY_WRAPAROUND = "wraparound";
+const KEY_WRAP_TO_SAME = "wrap-to-same";
+const KEY_WRAP_TO_SAME_SCROLL = "wrap-to-same-scroll";
+const KEY_MAX_HFRACTION = "max-screen-fraction";
+const KEY_MAX_HFRACTION_COLLAPSE = "max-screen-fraction-before-collapse";
+const KEY_SHOW_WORKSPACE_LABELS = "show-workspace-labels";
+const KEY_RELATIVE_WORKSPACE_SWITCHING = "relative-workspace-switching";
+const KEY_SCROLL_DIRECTION = "scroll-direction";

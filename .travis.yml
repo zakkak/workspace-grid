@@ -1,11 +1,16 @@
 language: node_js
+sudo: required
 node_js:
   - "6"
-
+before_script:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq gjs
+  - git clone https://github.com/ptomato/jasmine-gjs && cd jasmine-gjs && ./autogen.sh && make && sudo make install && cd ..
 script:
   - npm install eslint prettier
-  - ./node_modules/.bin/eslint src/*.js
-  - ./node_modules/.bin/prettier -l .travis.yml Readme.md src/*.js
+  - eslint src/*.js
+  - prettier -l .travis.yml Readme.md src/*.js
+  - jasmine
   - make dev-zip
 before_deploy:
   # Set up git user name and tag this commit
