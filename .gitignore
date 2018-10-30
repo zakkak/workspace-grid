@@ -1,2 +1,4 @@
 gschemas.compiled
 *.mo
+node_modules/
+*.zip

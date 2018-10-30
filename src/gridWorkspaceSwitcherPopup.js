@@ -17,28 +17,28 @@
  * <http://www.gnu.org/licenses/>.                                     *
  ***********************************************************************/
 
-const Lang    = imports.lang;
-const Main    = imports.ui.main;
-const Meta    = imports.gi.Meta;
-const St      = imports.gi.St;
+const Lang = imports.lang;
+const Main = imports.ui.main;
+const Meta = imports.gi.Meta;
+const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
 
 const ExtensionUtils = imports.misc.extensionUtils;
-const Me             = ExtensionUtils.getCurrentExtension();
-const Prefs          = Me.imports.prefs;
+const Me = ExtensionUtils.getCurrentExtension();
+const PrefKeys = Me.imports.prefKeys;
+const Utils = Me.imports.utils;
 
 const WorkspaceSwitcherPopup = imports.ui.workspaceSwitcherPopup;
 
-var UP    = Meta.MotionDirection.UP;
-var DOWN  = Meta.MotionDirection.DOWN;
-var LEFT  = Meta.MotionDirection.LEFT;
+var UP = Meta.MotionDirection.UP;
+var DOWN = Meta.MotionDirection.DOWN;
+var LEFT = Meta.MotionDirection.LEFT;
 var RIGHT = Meta.MotionDirection.RIGHT;
 
 /************
  * Workspace Switcher that can do rows and columns as opposed to just rows.
  ************/
 class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitcherPopup {
-
     _init(settings) {
         this.settings = settings;
         super._init();
@@ -47,24 +47,28 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
     // note: this makes sure everything fits vertically and then adjust the
     // horizontal to fit.
     _getPreferredHeight(actor, forWidth, alloc) {
-        let children    = this._list.get_children(),
-            primary     = Main.layoutManager.primaryMonitor,
-            nrows       = global.screen.workspace_grid.rows,
+        let children = this._list.get_children(),
+            primary = Main.layoutManager.primaryMonitor,
+            nrows = Utils.WS.getWS().workspace_grid.rows,
             availHeight = primary.height,
-            height      = 0,
-            spacing     = this._itemSpacing * (nrows - 1);
+            height = 0,
+            spacing = this._itemSpacing * (nrows - 1);
 
         availHeight -= Main.panel.actor.height;
         availHeight -= this.actor.get_theme_node().get_vertical_padding();
         availHeight -= this._container.get_theme_node().get_vertical_padding();
         availHeight -= this._list.get_theme_node().get_vertical_padding();
 
-        for (let i = 0; i < global.screen.n_workspaces;
-                i += global.screen.workspace_grid.columns) {
-            let [childMinHeight, childNaturalHeight] =
-                children[i].get_preferred_height(-1);
+        for (
+            let i = 0;
+            i < Utils.WS.getWS().n_workspaces;
+            i += Utils.WS.getWS().workspace_grid.columns
+        ) {
+            let [childMinHeight, childNaturalHeight] = children[
+                i
+            ].get_preferred_height(-1);
             children[i].get_preferred_width(childNaturalHeight);
-            height += childNaturalHeight * primary.width / primary.height;
+            height += (childNaturalHeight * primary.width) / primary.height;
         }
 
         height += spacing;
@@ -85,44 +89,50 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
             }
         }
 
-        alloc.min_size     = height;
+        alloc.min_size = height;
         alloc.natural_size = height;
     }
 
     _getPreferredWidth(actor, forHeight, alloc) {
         let primary = Main.layoutManager.primaryMonitor,
-            ncols   = global.screen.workspace_grid.columns;
-        this._childWidth = this._childHeight * primary.width / primary.height;
-        let width   = this._childWidth * ncols + this._itemSpacing * (ncols - 1),
-            padding = this.actor.get_theme_node().get_horizontal_padding() +
-                      this._list.get_theme_node().get_horizontal_padding() +
-                      this._container.get_theme_node().get_horizontal_padding();
+            ncols = Utils.WS.getWS().workspace_grid.columns;
+        this._childWidth = (this._childHeight * primary.width) / primary.height;
+        let width = this._childWidth * ncols + this._itemSpacing * (ncols - 1),
+            padding =
+                this.actor.get_theme_node().get_horizontal_padding() +
+                this._list.get_theme_node().get_horizontal_padding() +
+                this._container.get_theme_node().get_horizontal_padding();
 
         // but constrain to at most primary.width
         if (width + padding > primary.width) {
-            this._childWidth  = (primary.width - padding -
-                                this._itemSpacing * (ncols - 1)) / ncols;
-            this._childHeight = this._childWidth * primary.height /
-                                primary.width;
+            this._childWidth =
+                (primary.width - padding - this._itemSpacing * (ncols - 1)) /
+                ncols;
+            this._childHeight =
+                (this._childWidth * primary.height) / primary.width;
             width = primary.width - padding;
         }
 
-        alloc.min_size     = width;
+        alloc.min_size = width;
         alloc.natural_size = width;
     }
 
     _allocate(actor, box, flags) {
         let children = this._list.get_children(),
             childBox = new Clutter.ActorBox(),
-            x        = box.x1,
-            y        = box.y1,
-            prevX    = x,
-            prevY    = y,
-            i        = 0;
-        for (let row = 0; row < global.screen.workspace_grid.rows; ++row) {
-            x     = box.x1;
+            x = box.x1,
+            y = box.y1,
+            prevX = x,
+            prevY = y,
+            i = 0;
+        for (let row = 0; row < Utils.WS.getWS().workspace_grid.rows; ++row) {
+            x = box.x1;
             prevX = x;
-            for (let col = 0; col < global.screen.workspace_grid.columns; ++col) {
+            for (
+                let col = 0;
+                col < Utils.WS.getWS().workspace_grid.columns;
+                ++col
+            ) {
                 childBox.x1 = prevX;
                 childBox.x2 = Math.round(x + this._childWidth);
                 childBox.y1 = prevY;
@@ -142,37 +152,42 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
         //log('redisplay, direction ' + this._direction + ', going to ' + this._activeWorkspaceIndex);
         this._list.destroy_all_children();
 
-        for (let i = 0; i < global.screen.n_workspaces; i++) {
+        for (let i = 0; i < Utils.WS.getWS().n_workspaces; i++) {
             let indicator = null;
             let name = Meta.prefs_get_workspace_name(i);
 
-            if (i === this._activeWorkspaceIndex &&
-                   this._direction === UP) {
+            if (i === this._activeWorkspaceIndex && this._direction === UP) {
                 indicator = new St.Bin({
-                    style_class: 'ws-switcher-active-up'
+                    style_class: "ws-switcher-active-up"
                 });
-            } else if (i === this._activeWorkspaceIndex &&
-                   this._direction === DOWN) {
+            } else if (
+                i === this._activeWorkspaceIndex &&
+                this._direction === DOWN
+            ) {
                 indicator = new St.Bin({
-                    style_class: 'ws-switcher-active-down'
+                    style_class: "ws-switcher-active-down"
                 });
-            } else if (i === this._activeWorkspaceIndex &&
-                   this._direction === LEFT) {
+            } else if (
+                i === this._activeWorkspaceIndex &&
+                this._direction === LEFT
+            ) {
                 indicator = new St.Bin({
-                    style_class: 'ws-switcher-active-left'
+                    style_class: "ws-switcher-active-left"
                 });
-            } else if (i === this._activeWorkspaceIndex &&
-                   this._direction === RIGHT) {
+            } else if (
+                i === this._activeWorkspaceIndex &&
+                this._direction === RIGHT
+            ) {
                 indicator = new St.Bin({
-                    style_class: 'ws-switcher-active-right'
+                    style_class: "ws-switcher-active-right"
                 });
             } else {
-                indicator = new St.Bin({style_class: 'ws-switcher-box'});
+                indicator = new St.Bin({ style_class: "ws-switcher-box" });
             }
-            if (this.settings.get_boolean(Prefs.KEY_SHOW_WORKSPACE_LABELS)) {
+            if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_LABELS)) {
                 indicator.child = new St.Label({
                     text: name,
-                    style_class: 'ws-switcher-label'
+                    style_class: "ws-switcher-label"
                 });
             }
 
@@ -180,11 +195,24 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
         }
 
         let primary = Main.layoutManager.primaryMonitor;
-        let [containerMinHeight, containerNatHeight] = this._container.get_preferred_height(global.screen_width);
-        let [containerMinWidth, containerNatWidth] = this._container.get_preferred_width(containerNatHeight);
-        this._container.x = primary.x + Math.floor((primary.width - containerNatWidth) / 2);
-        this._container.y = primary.y + Main.panel.actor.height +
-                            Math.floor(((primary.height - Main.panel.actor.height) - containerNatHeight) / 2);
+        let [
+            containerMinHeight,
+            containerNatHeight
+        ] = this._container.get_preferred_height(primary.width);
+        let [
+            containerMinWidth,
+            containerNatWidth
+        ] = this._container.get_preferred_width(containerNatHeight);
+        this._container.x =
+            primary.x + Math.floor((primary.width - containerNatWidth) / 2);
+        this._container.y =
+            primary.y +
+            Main.panel.actor.height +
+            Math.floor(
+                (primary.height -
+                    Main.panel.actor.height -
+                    containerNatHeight) /
+                    2
+            );
     }
-
 }
