@@ -66,7 +66,7 @@ Go to `Extension` an click on the gear next to `Workspace grid`.
 ### Configuration options:
 
 - Number of rows/columns in the workspace.
-- Reative workspace switching.
+- Relative workspace switching.
 
   When using relative navigation you always stay within current row of desktops.
 
