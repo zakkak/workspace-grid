@@ -1,6 +1,7 @@
 # Workspace Grid GNOME Shell Extension
 
 [![codebeat badge](https://codebeat.co/badges/094b19ec-27d6-48ca-abd8-71c9459690a8)](https://codebeat.co/projects/github-com-zakkak-workspace-grid-3-30) [![Build Status](https://travis-ci.org/zakkak/workspace-grid.svg)](https://travis-ci.org/zakkak/workspace-grid)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fzakkak%2Fworkspace-grid.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fzakkak%2Fworkspace-grid?ref=badge_shield)
 
 This extension allows you to configure your workspaces in a grid,
 inspired by the [Frippery Static Workspaces extension](https://extensions.gnome.org/extension/12/static-workspaces/).
@@ -208,3 +209,7 @@ Hence we make use of the Frippery Static Workspace code.
 
 See also the edited workspaces indicator
 <http://kubiznak-petr.ic.cz/en/workspace-indicator.php> (this is column-major).
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fzakkak%2Fworkspace-grid.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fzakkak%2Fworkspace-grid?ref=badge_large)
