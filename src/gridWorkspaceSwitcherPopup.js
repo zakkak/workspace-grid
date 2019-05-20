@@ -180,7 +180,7 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
                 prevX = childBox.x2 + this._itemSpacing;
 
                 if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
-                    children[i].child.child.set_scale(tbWScale, tbHScale);
+                    children[i].child.get_children()[0].set_scale(tbWScale, tbHScale);
                     children[i].child.allocate(childBox, flags);
                 }
                 children[i].allocate(childBox, flags);
@@ -230,7 +230,7 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
                 indicator = new St.Bin({ style_class: "ws-switcher-box" });
             }
             if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
-                let tbBox = new St.Bin({
+                let tbBox = new St.Widget({
                     clip_to_allocation: true,
                     style_class: "ws-switcher-tb-box"
                 });
@@ -246,7 +246,20 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
                 tb.state = WorkspaceThumbnail.ThumbnailState.NORMAL;
                 tb.actor.clip_to_allocation = false;
 
-                tbBox.child = tb.actor;
+                tbBox.add_child(tb.actor);
+
+                if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_LABELS)) {
+                    let labelBox = new St.Bin({
+                        style_class: "ws-switcher-label-box"
+                    });
+                    let label = new St.Label({
+                        text: name,
+                        style_class: i === this._activeWorkspaceIndex ? "ws-switcher-label-active" : "ws-switcher-label"
+                    });
+                    labelBox.set_child(label);
+                    tbBox.add_child(labelBox);
+                }
+
                 indicator.child = tbBox;
             }
             else if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_LABELS)) {
