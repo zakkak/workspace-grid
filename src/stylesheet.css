@@ -64,8 +64,18 @@
     background-color: rgba(32, 96, 152, 0.8);
 }
 
+.ws-switcher-label-box {
+    background-color: rgba(32, 96, 152, 0.8);
+    padding: 5px;
+}
+
 .ws-switcher-label {
     color: rgba(255, 255, 255, 0.80);
+    font-size: 2em;
+}
+
+.ws-switcher-label-active {
+    color: rgba(255, 0, 0, 1);
     font-size: 2em;
 }
 
