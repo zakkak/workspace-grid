@@ -25,5 +25,6 @@ const KEY_WRAP_TO_SAME_SCROLL = "wrap-to-same-scroll";
 const KEY_MAX_HFRACTION = "max-screen-fraction";
 const KEY_MAX_HFRACTION_COLLAPSE = "max-screen-fraction-before-collapse";
 const KEY_SHOW_WORKSPACE_LABELS = "show-workspace-labels";
+const KEY_SHOW_WORKSPACE_THUMBNAILS = "show-workspace-thumbnails";
 const KEY_RELATIVE_WORKSPACE_SWITCHING = "relative-workspace-switching";
 const KEY_SCROLL_DIRECTION = "scroll-direction";

@@ -141,11 +141,17 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
             prevY = y,
             i = 0;
 
-        let tbPortholeWidth = this._porthole.width - this._porthole.x;
-        let tbPortholeHeight = this._porthole.height - this._porthole.y;
+        let tbPortholeWidth = this._porthole.width - this._porthole.x,
+            tbPortholeHeight = this._porthole.height - this._porthole.y;
 
-        let tbHScale = 0;
-        let tbWScale = 0;
+        let tbHScale = 0,
+            tbWScale = 0;
+
+        let tbBoxThemeNode,
+            tbBoxMarginTop,
+            tbBoxMarginBottom,
+            tbBoxMarginLeft,
+            tbBoxMarginRight;
 
         for (let row = 0; row < Utils.WS.getWS().workspace_grid.rows; ++row) {
             x = box.x1;
@@ -155,25 +161,28 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
                 col < Utils.WS.getWS().workspace_grid.columns;
                 ++col
             ) {
-                let tbBoxThemeNode = children[i].child.get_theme_node();
-                let tbBoxMarginTop = tbBoxThemeNode.get_margin(St.Side.TOP);
-                let tbBoxMarginBottom = tbBoxThemeNode.get_margin(St.Side.BOTTOM);
-                let tbBoxMarginLeft = tbBoxThemeNode.get_margin(St.Side.LEFT);
-                let tbBoxMarginRight = tbBoxThemeNode.get_margin(St.Side.RIGHT);
-
                 childBox.x1 = prevX;
                 childBox.x2 = Math.round(x + this._childWidth);
                 childBox.y1 = prevY;
                 childBox.y2 = Math.round(y + this._childHeight);
 
-                tbWScale = (childBox.x2 - childBox.x1 - tbBoxMarginLeft - tbBoxMarginRight) / tbPortholeWidth;
-                tbHScale = (childBox.y2 - childBox.y1 - tbBoxMarginTop - tbBoxMarginBottom) / tbPortholeHeight;
+                if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
+                    tbBoxThemeNode = children[i].child.get_theme_node();
+                    tbBoxMarginTop = tbBoxThemeNode.get_margin(St.Side.TOP);
+                    tbBoxMarginBottom = tbBoxThemeNode.get_margin(St.Side.BOTTOM);
+                    tbBoxMarginLeft = tbBoxThemeNode.get_margin(St.Side.LEFT);
+                    tbBoxMarginRight = tbBoxThemeNode.get_margin(St.Side.RIGHT);
+                    tbWScale = (childBox.x2 - childBox.x1 - tbBoxMarginLeft - tbBoxMarginRight) / tbPortholeWidth;
+                    tbHScale = (childBox.y2 - childBox.y1 - tbBoxMarginTop - tbBoxMarginBottom) / tbPortholeHeight;
+                }
 
                 x += this._childWidth + this._itemSpacing;
                 prevX = childBox.x2 + this._itemSpacing;
 
-                children[i].child.child.set_scale(tbWScale, tbHScale);
-                children[i].child.allocate(childBox, flags);
+                if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
+                    children[i].child.child.set_scale(tbWScale, tbHScale);
+                    children[i].child.allocate(childBox, flags);
+                }
                 children[i].allocate(childBox, flags);
 
                 i++;
@@ -220,11 +229,7 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
             } else {
                 indicator = new St.Bin({ style_class: "ws-switcher-box" });
             }
-            if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_LABELS)) {
-                /*indicator.child = new St.Label({
-                    text: name,
-                    style_class: "ws-switcher-label"
-                });*/
+            if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_THUMBNAILS)) {
                 let tbBox = new St.Bin({
                     clip_to_allocation: true,
                     style_class: "ws-switcher-tb-box"
@@ -244,7 +249,12 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
                 tbBox.child = tb.actor;
                 indicator.child = tbBox;
             }
-
+            else if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_LABELS)) {
+                indicator.child = new St.Label({
+                    text: name,
+                    style_class: "ws-switcher-label"
+                });
+            }
             this._list.add_actor(indicator);
         }
 
