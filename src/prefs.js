@@ -46,6 +46,7 @@ var KEY_WRAP_TO_SAME_SCROLL = PrefKeys.KEY_WRAP_TO_SAME_SCROLL;
 var KEY_MAX_HFRACTION = PrefKeys.KEY_MAX_HFRACTION;
 var KEY_MAX_HFRACTION_COLLAPSE = PrefKeys.KEY_MAX_HFRACTION_COLLAPSE;
 var KEY_SHOW_WORKSPACE_LABELS = PrefKeys.KEY_SHOW_WORKSPACE_LABELS;
+var KEY_SHOW_WORKSPACE_THUMBNAILS = PrefKeys.KEY_SHOW_WORKSPACE_THUMBNAILS;
 var KEY_RELATIVE_WORKSPACE_SWITCHING =
     PrefKeys.KEY_RELATIVE_WORKSPACE_SWITCHING;
 var KEY_SCROLL_DIRECTION = PrefKeys.KEY_SCROLL_DIRECTION;
@@ -136,6 +137,11 @@ const WorkspaceGridPrefsWidget = GObject.registerClass(
             this.addBoolean(
                 _("Show workspace labels in the switcher?"),
                 KEY_SHOW_WORKSPACE_LABELS
+            );
+
+            this.addBoolean(
+                _("Show workspace thumbnails in the switcher?"),
+                KEY_SHOW_WORKSPACE_THUMBNAILS
             );
 
             this.addTextComboBox("Scroll Direction: ", KEY_SCROLL_DIRECTION, [
