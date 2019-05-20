@@ -37,6 +37,10 @@
     padding: 10px;
 }
 
+.ws-switcher-tb-box {
+    margin: 10px;
+}
+
 /* Note:
  * .ws-switcher-active-{up,down} are already in the global .css so we override them here.
  */

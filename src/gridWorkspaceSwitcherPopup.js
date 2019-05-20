@@ -30,6 +30,8 @@ const Utils = Me.imports.utils;
 
 const WorkspaceSwitcherPopup = imports.ui.workspaceSwitcherPopup;
 
+const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
+
 var UP = Meta.MotionDirection.UP;
 var DOWN = Meta.MotionDirection.DOWN;
 var LEFT = Meta.MotionDirection.LEFT;
@@ -41,6 +43,7 @@ var RIGHT = Meta.MotionDirection.RIGHT;
 class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitcherPopup {
     _init(settings) {
         this.settings = settings;
+        this._porthole = null;
         super._init();
     }
 
@@ -117,7 +120,19 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
         alloc.natural_size = width;
     }
 
+    _ensurePorthole() {
+        if (!Main.layoutManager.primaryMonitor)
+            return false;
+
+        if (!this._porthole)
+            this._porthole = Main.layoutManager.getWorkAreaForMonitor(Main.layoutManager.primaryIndex);
+
+        return true;
+    }
+
     _allocate(actor, box, flags) {
+        this._ensurePorthole();
+
         let children = this._list.get_children(),
             childBox = new Clutter.ActorBox(),
             x = box.x1,
@@ -125,6 +140,13 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
             prevX = x,
             prevY = y,
             i = 0;
+
+        let tbPortholeWidth = this._porthole.width - this._porthole.x;
+        let tbPortholeHeight = this._porthole.height - this._porthole.y;
+
+        let tbHScale = 0;
+        let tbWScale = 0;
+
         for (let row = 0; row < Utils.WS.getWS().workspace_grid.rows; ++row) {
             x = box.x1;
             prevX = x;
@@ -133,14 +155,27 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
                 col < Utils.WS.getWS().workspace_grid.columns;
                 ++col
             ) {
+                let tbBoxThemeNode = children[i].child.get_theme_node();
+                let tbBoxMarginTop = tbBoxThemeNode.get_margin(St.Side.TOP);
+                let tbBoxMarginBottom = tbBoxThemeNode.get_margin(St.Side.BOTTOM);
+                let tbBoxMarginLeft = tbBoxThemeNode.get_margin(St.Side.LEFT);
+                let tbBoxMarginRight = tbBoxThemeNode.get_margin(St.Side.RIGHT);
+
                 childBox.x1 = prevX;
                 childBox.x2 = Math.round(x + this._childWidth);
                 childBox.y1 = prevY;
                 childBox.y2 = Math.round(y + this._childHeight);
 
+                tbWScale = (childBox.x2 - childBox.x1 - tbBoxMarginLeft - tbBoxMarginRight) / tbPortholeWidth;
+                tbHScale = (childBox.y2 - childBox.y1 - tbBoxMarginTop - tbBoxMarginBottom) / tbPortholeHeight;
+
                 x += this._childWidth + this._itemSpacing;
                 prevX = childBox.x2 + this._itemSpacing;
+
+                children[i].child.child.set_scale(tbWScale, tbHScale);
+                children[i].child.allocate(childBox, flags);
                 children[i].allocate(childBox, flags);
+
                 i++;
             }
             prevY = childBox.y2 + this._itemSpacing;
@@ -149,8 +184,9 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
     }
 
     _redisplay() {
-        //log('redisplay, direction ' + this._direction + ', going to ' + this._activeWorkspaceIndex);
         this._list.destroy_all_children();
+
+        this._ensurePorthole();
 
         for (let i = 0; i < Utils.WS.getWS().n_workspaces; i++) {
             let indicator = null;
@@ -185,10 +221,28 @@ class gridWorkspaceSwitcherPopup extends WorkspaceSwitcherPopup.WorkspaceSwitche
                 indicator = new St.Bin({ style_class: "ws-switcher-box" });
             }
             if (this.settings.get_boolean(PrefKeys.KEY_SHOW_WORKSPACE_LABELS)) {
-                indicator.child = new St.Label({
+                /*indicator.child = new St.Label({
                     text: name,
                     style_class: "ws-switcher-label"
+                });*/
+                let tbBox = new St.Bin({
+                    clip_to_allocation: true,
+                    style_class: "ws-switcher-tb-box"
                 });
+                let ws = Utils.WS.getWS().get_workspace_by_index(i);
+                let tb = new WorkspaceThumbnail.WorkspaceThumbnail(ws);
+
+                tb.setPorthole(
+                    this._porthole.x, 
+                    this._porthole.y, 
+                    this._porthole.width, 
+                    this._porthole.height
+                );
+                tb.state = WorkspaceThumbnail.ThumbnailState.NORMAL;
+                tb.actor.clip_to_allocation = false;
+
+                tbBox.child = tb.actor;
+                indicator.child = tbBox;
             }
 
             this._list.add_actor(indicator);
