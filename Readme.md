@@ -4,6 +4,12 @@
 [![codebeat badge](https://codebeat.co/badges/094b19ec-27d6-48ca-abd8-71c9459690a8)](https://codebeat.co/projects/github-com-zakkak-workspace-grid-3-30)
 [![Build Status](https://travis-ci.org/zakkak/workspace-grid.svg)](https://travis-ci.org/zakkak/workspace-grid)
 
+# This extension is no longer maintained
+
+Please see https://github.com/mzur/gnome-shell-wsmatrix instead
+
+---
+
 This extension allows you to configure your workspaces in a grid,
 inspired by the [Frippery Static Workspaces extension](https://extensions.gnome.org/extension/12/static-workspaces/).
 
